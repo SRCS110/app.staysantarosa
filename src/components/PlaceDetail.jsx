@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ArrowRight, ExternalLink, MapPinIcon } from './icons.jsx';
+import { ChevronLeft, ExternalLink, MapPinIcon, GuideIcon } from './icons.jsx';
 import { estimateFrom } from '../lib/geo.js';
 
 const TAG_KIND = ['tag-accent', 'tag-accent-2', 'tag-neutral'];
@@ -16,7 +16,6 @@ export default function PlaceDetail({
   inPlan,
   visited,
   onBack,
-  onShowOnPlan,
   onToggleInPlan,
   onToggleVisited,
 }) {
@@ -33,7 +32,7 @@ export default function PlaceDetail({
       <div className="detail-body">
         <h1 className="detail-title">{place.name}</h1>
         <p className="detail-subtitle">
-          {guideTitle} · pin {place.l}
+          <GuideIcon guideKey={place.guideKey} size={13} /> {guideTitle}
         </p>
 
         <div className="detail-photo-plate">
@@ -82,17 +81,11 @@ export default function PlaceDetail({
         <div className="detail-actions">
           <button
             type="button"
-            className={`icon-circle-btn-outline${inPlan ? ' icon-circle-btn-outline-active' : ''}`}
+            className={`btn btn-primary btn-block detail-primary${inPlan ? ' detail-primary-active' : ''}`}
             onClick={onToggleInPlan}
             aria-pressed={inPlan}
-            aria-label={inPlan ? 'Remove from plan' : 'Add to plan'}
-            title={inPlan ? 'Remove from plan' : 'Add to plan'}
           >
-            {inPlan ? '✓' : '+'}
-          </button>
-
-          <button type="button" className="btn btn-primary btn-block detail-primary" onClick={onShowOnPlan}>
-            Show on plan <ArrowRight size={16} />
+            {inPlan ? '✓ In plan' : 'Add to plan'}
           </button>
 
           <a

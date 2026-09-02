@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { GUIDES, GUIDES_BY_KEY, HOTELS } from './data/guides.js';
+import { GUIDES_BY_KEY, HOTELS } from './data/guides.js';
 import { loadPlan, savePlan } from './lib/planStorage.js';
 import PlanPanel from './components/PlanPanel.jsx';
 import GuideChips from './components/GuideChips.jsx';
 import StubList from './components/StubList.jsx';
 import PlaceDetail from './components/PlaceDetail.jsx';
 import FullMapScreen from './components/FullMapScreen.jsx';
+import PlanScreen from './components/PlanScreen.jsx';
+import BottomNav from './components/BottomNav.jsx';
 
 export default function App() {
   const [guide, setGuideKey] = useState('dining');
-  const [screen, setScreen] = useState('home'); // 'home' | 'detail' | 'map'
-  const [returnScreen, setReturnScreen] = useState('home');
+  const [activeTab, setActiveTab] = useState('build'); // 'build' | 'plan' | 'map'
+  const [view, setView] = useState('tabs'); // 'tabs' | 'detail'
   const [selectedPlace, setSelectedPlace] = useState(null); // resolved place + guideKey
   const [emphasizedName, setEmphasizedName] = useState(null);
 
@@ -57,26 +59,11 @@ export default function App() {
 
   function openPlace(place, guideKey) {
     setSelectedPlace({ ...place, guideKey: guideKey || guide });
-    setReturnScreen(screen === 'map' ? 'map' : 'home');
-    setScreen('detail');
+    setView('detail');
   }
 
   function backFromDetail() {
-    setScreen(returnScreen);
-  }
-
-  function openFullMap() {
-    setScreen('map');
-  }
-
-  function backFromMap() {
-    setScreen('home');
-  }
-
-  function showOnPlan() {
-    if (selectedPlace) setEmphasizedName(selectedPlace.name);
-    setScreen('map');
-    window.setTimeout(() => setEmphasizedName(null), 3000);
+    setView('tabs');
   }
 
   function isInPlan(place, guideKey) {
@@ -148,11 +135,11 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {screen === 'home' && (
+      {view === 'tabs' && activeTab === 'build' && (
         <div className="home-screen">
           <div className="home-topbar">
             <span className="home-kicker">Santa Rosa · Sonoma Wine Country</span>
-            <span className="home-free-pill">Free · No sign-in</span>
+            <span className="home-free-pill">{planPlaces.length ? `My Plan · ${planPlaces.length}` : 'Free · No sign-in'}</span>
           </div>
 
           <div className="home-map-frame">
@@ -168,14 +155,6 @@ export default function App() {
               onLocateToggle={onLocateToggle}
               locateError={locateError}
             />
-            <button type="button" className="home-map-expand" onClick={openFullMap}>
-              Full map
-            </button>
-            {planPlaces.length > 0 && (
-              <button type="button" className="home-plan-pill" onClick={openFullMap}>
-                My Plan · {planPlaces.length}
-              </button>
-            )}
           </div>
 
           <GuideChips activeKey={guide} onSelect={selectGuide} />
@@ -189,25 +168,20 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'detail' && selectedPlace && (
-        <PlaceDetail
-          place={selectedPlace}
-          guideTitle={GUIDES_BY_KEY[selectedPlace.guideKey].title}
-          userLocation={userLocation}
-          inPlan={isInPlan(selectedPlace, selectedPlace.guideKey)}
-          visited={planStops.some(
-            (s) => s.guideKey === selectedPlace.guideKey && s.name === selectedPlace.name && s.visited
-          )}
-          onBack={backFromDetail}
-          onShowOnPlan={showOnPlan}
-          onToggleInPlan={() => toggleInPlan(selectedPlace, selectedPlace.guideKey)}
-          onToggleVisited={() => toggleVisited({ guideKey: selectedPlace.guideKey, name: selectedPlace.name })}
+      {view === 'tabs' && activeTab === 'plan' && (
+        <PlanScreen
+          stops={planPlaces}
+          origin={userLocation || HOTELS.courthouseSquare}
+          onOpenPlace={(s) => openPlace(s, s.guideKey)}
+          onToggleVisited={toggleVisited}
+          onMove={movePlanStop}
+          onRemove={removePlanStop}
+          onClear={clearPlan}
         />
       )}
 
-      {screen === 'map' && (
+      {view === 'tabs' && activeTab === 'map' && (
         <FullMapScreen
-          guide={activeGuide}
           activeGuideKey={guide}
           onSelectGuide={selectGuide}
           places={activeGuide.places}
@@ -218,17 +192,31 @@ export default function App() {
           onLocateToggle={onLocateToggle}
           locateError={locateError}
           emphasizedName={emphasizedName}
-          onBack={backFromMap}
           onOpenPlace={openPlace}
-          onToggleVisited={toggleVisited}
-          onMovePlan={movePlanStop}
-          onRemovePlan={removePlanStop}
-          onClearPlan={clearPlan}
           mapMode={mapMode}
           onSetMapMode={setMapMode}
           ringOriginKey={ringOriginKey}
           onSetRingOriginKey={setRingOriginKey}
         />
+      )}
+
+      {view === 'detail' && selectedPlace && (
+        <PlaceDetail
+          place={selectedPlace}
+          guideTitle={GUIDES_BY_KEY[selectedPlace.guideKey].title}
+          userLocation={userLocation}
+          inPlan={isInPlan(selectedPlace, selectedPlace.guideKey)}
+          visited={planStops.some(
+            (s) => s.guideKey === selectedPlace.guideKey && s.name === selectedPlace.name && s.visited
+          )}
+          onBack={backFromDetail}
+          onToggleInPlan={() => toggleInPlan(selectedPlace, selectedPlace.guideKey)}
+          onToggleVisited={() => toggleVisited({ guideKey: selectedPlace.guideKey, name: selectedPlace.name })}
+        />
+      )}
+
+      {view === 'tabs' && (
+        <BottomNav activeTab={activeTab} onSelect={setActiveTab} planCount={planPlaces.length} />
       )}
     </div>
   );

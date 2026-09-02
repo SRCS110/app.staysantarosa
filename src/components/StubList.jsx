@@ -1,4 +1,5 @@
 import React from 'react';
+import { GuideIcon } from './icons.jsx';
 
 // The "ticket stub" sheet — perforated top edge (a row of pill notches cut
 // into the dark panel above it), guide title/count, and the place list.
@@ -30,7 +31,9 @@ export default function StubList({ guide, onOpenPlace, isInPlan, onTogglePlan })
           return (
             <div key={p.l} className="stub-row">
               <button type="button" className="stub-row-tap" onClick={() => onOpenPlace(p)}>
-                <span className="stub-letter">{p.l}</span>
+                <span className="stub-letter">
+                  <GuideIcon guideKey={guide.key} size={14} />
+                </span>
                 <span className="stub-info">
                   <span className="stub-name">{p.name}</span>
                   <span className="stub-note">{p.note}</span>

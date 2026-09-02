@@ -1,5 +1,6 @@
 import React from 'react';
 import { GUIDES } from '../data/guides.js';
+import { GuideIcon } from './icons.jsx';
 
 export default function GuideChips({ activeKey, onSelect }) {
   return (
@@ -16,6 +17,7 @@ export default function GuideChips({ activeKey, onSelect }) {
             className={`guide-chip${active ? ' guide-chip-active' : ''}`}
             onClick={() => onSelect(g.key)}
           >
+            <GuideIcon guideKey={g.key} size={14} />
             {g.tab}
           </button>
         );

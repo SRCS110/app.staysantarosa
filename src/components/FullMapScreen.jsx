@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import MapView from './MapView.jsx';
 import GuideChips from './GuideChips.jsx';
-import PlanSheet from './PlanSheet.jsx';
 import RingOriginSheet from './RingOriginSheet.jsx';
-import { ChevronLeft } from './icons.jsx';
 import { haversineMiles, walkMinutes, driveMinutes } from '../lib/geo.js';
 
-// Page 3 — the full map. Shows the active guide's pins, the visitor's
-// self-built plan as a numbered route with a "next stop" callout, and (mode
-// toggle, top right) direction 1c's walking-time rings from a chosen origin.
+// The Map tab — everything shown relative to you. It's a normal part of
+// the scrolling page (not a fixed-viewport panel): the map sits in a
+// fixed-height section up top — panned/zoomed with two fingers, a mouse
+// drag, or Ctrl/Cmd+scroll, so a plain one-finger swipe or scroll always
+// falls through to the page — and, in Rings mode, the origin switcher
+// sits in normal flow right underneath it. The plan itself lives on its
+// own Plan tab now, not docked under the map.
 export default function FullMapScreen({
-  guide,
   activeGuideKey,
   onSelectGuide,
   places,
@@ -21,19 +22,12 @@ export default function FullMapScreen({
   onLocateToggle,
   locateError,
   emphasizedName,
-  onBack,
   onOpenPlace,
-  onToggleVisited,
-  onMovePlan,
-  onRemovePlan,
-  onClearPlan,
   mapMode,
   onSetMapMode,
   ringOriginKey,
   onSetRingOriginKey,
 }) {
-  const [sheetOpen, setSheetOpen] = useState(true);
-
   const origins = [
     { key: 'courthouseSquare', label: 'Courthouse Square', point: hotels.courthouseSquare },
     { key: 'me', label: 'My location', point: userLocation, disabled: !userLocation },
@@ -54,9 +48,7 @@ export default function FullMapScreen({
   return (
     <div className="full-map-screen">
       <div className="full-map-topbar">
-        <button type="button" className="icon-circle-btn" onClick={onBack} aria-label="Back">
-          <ChevronLeft />
-        </button>
+        <span className="home-kicker">Santa Rosa · Sonoma Wine Country</span>
         <div className="full-map-mode-toggle" role="tablist" aria-label="Map style">
           <button
             type="button"
@@ -110,36 +102,17 @@ export default function FullMapScreen({
         )}
       </div>
 
-      <div className={`sheet-dock${sheetOpen ? '' : ' sheet-dock-collapsed'}`}>
-        <button
-          type="button"
-          className="sheet-dock-handle"
-          onClick={() => setSheetOpen((v) => !v)}
-          aria-expanded={sheetOpen}
-        >
-          <span className="sheet-dock-grip" />
-        </button>
-        {sheetOpen &&
-          (mapMode === 'rings' ? (
-            <RingOriginSheet
-              origins={origins}
-              activeKey={activeOrigin.key}
-              onSelect={onSetRingOriginKey}
-              places={places}
-              originPoint={activeOrigin.point}
-            />
-          ) : (
-            <PlanSheet
-              stops={planPlaces}
-              origin={userLocation || hotels.courthouseSquare}
-              onOpenPlace={(s) => onOpenPlace(s, s.guideKey)}
-              onToggleVisited={onToggleVisited}
-              onMove={onMovePlan}
-              onRemove={onRemovePlan}
-              onClear={onClearPlan}
-            />
-          ))}
-      </div>
+      {mapMode === 'rings' && (
+        <div className="map-plan-section">
+          <RingOriginSheet
+            origins={origins}
+            activeKey={activeOrigin.key}
+            onSelect={onSetRingOriginKey}
+            places={places}
+            originPoint={activeOrigin.point}
+          />
+        </div>
+      )}
     </div>
   );
 }
