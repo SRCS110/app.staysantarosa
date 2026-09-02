@@ -5,31 +5,37 @@
 // Best City for Walking" blog post — names, addresses, phone numbers,
 // hours and ratings are the site's real, published data.
 //
-// Walking/driving times are estimated (straight-line distance from each
-// hotel at an average pace), and the two hotels' coordinates and the plan's
-// x/y pin positions are approximate, matching the design handoff's own
-// note that map geometry and times are placeholder-quality pending a real
-// drawn plan and checked data. Replace HOTELS coordinates and re-derive x/y
-// once a real illustrated plan and verified hotel geocodes exist.
+// Every place's walk/drive time is measured from ONE central point — Old
+// Courthouse Square — rather than from two separate hotels. Hotel E's own
+// address (37 Old Courthouse Square) is that same point, so the numbers
+// below are unchanged from the old "from Hotel E" figures, just re-labeled;
+// nothing was recalculated. Times are still straight-line estimates at an
+// average walking pace, and CENTER's coordinates are approximate pending a
+// verified geocode — see the design handoff's own placeholder-data note.
 
+export const CENTER = {
+  key: 'courthouseSquare',
+  name: 'Courthouse Square',
+  fullName: 'Old Courthouse Square (Hotel E)',
+  lat: 38.4409,
+  lng: -122.7161,
+};
+
+// HOTELS still lists both properties as map landmarks — Art House is a
+// real, separate location guests may want to see — but CENTER above, not
+// either hotel individually, is what every place's walk/drive time is
+// measured from.
 export const HOTELS = {
   artHouse: {
     key: 'artHouse',
     name: 'Art House',
     fullName: 'Art House Santa Rosa',
-    x: 48.7,
-    y: 57.5,
+    lat: 38.4413, lng: -122.7168,
   },
-  hotelE: {
-    key: 'hotelE',
-    name: 'Hotel E',
-    fullName: 'Hotel E',
-    x: 51.7,
-    y: 60.0,
-  },
+  courthouseSquare: CENTER,
 };
 
-// walk = { min, mode: 'walk' | 'drive' }
+// walk = { min, mode: 'walk' | 'drive' } — distance from CENTER
 const w = (min) => ({ min, mode: 'walk' });
 const dr = (min) => ({ min, mode: 'drive' });
 
@@ -52,8 +58,8 @@ export const GUIDES = [
         website: 'https://www.omeletteexpress.com/',
         mapsUrl: 'https://maps.google.com/?cid=9438627592877700326',
         hoursNote: 'Daily · 6:30 AM – 2:30 PM',
-        x: 32.8, y: 81.5,
-        walk: { artHouse: w(7), hotelE: w(7) },
+        lat: 38.437463, lng: -122.720461,
+        walk: w(7),
       },
       {
         l: 'B',
@@ -67,8 +73,8 @@ export const GUIDES = [
         website: 'https://shadyraveninc.com/',
         mapsUrl: 'https://maps.google.com/?cid=4678855885854647237',
         hoursNote: 'Mon–Fri 6 AM · Sat–Sun 7 AM – 3 PM',
-        x: 58.7, y: 57.9,
-        walk: { artHouse: w(3), hotelE: w(2) },
+        lat: 38.441235, lng: -122.714499,
+        walk: w(2),
       },
       {
         l: 'C',
@@ -82,8 +88,8 @@ export const GUIDES = [
         website: 'https://hakusushisantarosa.com/',
         mapsUrl: 'https://maps.google.com/?cid=4933623103771138221',
         hoursNote: 'Daily · 10 AM – Midnight',
-        x: 48.1, y: 52.6,
-        walk: { artHouse: w(2), hotelE: w(2) },
+        lat: 38.442085, lng: -122.716933,
+        walk: w(2),
       },
       {
         l: 'D',
@@ -97,8 +103,8 @@ export const GUIDES = [
         website: 'https://kalimerabarandgrill.com/',
         mapsUrl: 'https://maps.google.com/?cid=5816271711310318939',
         hoursNote: 'Daily 11 AM · to 10 PM Fri–Sat',
-        x: 48.0, y: 55.7,
-        walk: { artHouse: w(1), hotelE: w(2) },
+        lat: 38.441582, lng: -122.71695,
+        walk: w(2),
       },
       {
         l: 'E',
@@ -112,8 +118,8 @@ export const GUIDES = [
         website: 'https://www.lorodinapolica.com/santa-rosa',
         mapsUrl: 'https://maps.google.com/?cid=5093330181087297330',
         hoursNote: 'Closed Mon · 11:30 AM – 9/10 PM',
-        x: 62.9, y: 61.0,
-        walk: { artHouse: w(4), hotelE: w(3) },
+        lat: 38.440733, lng: -122.713543,
+        walk: w(3),
       },
       {
         l: 'F',
@@ -127,8 +133,8 @@ export const GUIDES = [
         website: 'https://www.larosasantarosa.com/',
         mapsUrl: 'https://maps.google.com/?cid=17906632041140775428',
         hoursNote: 'Daily 11:30 AM – 9/10 PM',
-        x: 54.2, y: 67.6,
-        walk: { artHouse: w(3), hotelE: w(2) },
+        lat: 38.439691, lng: -122.715542,
+        walk: w(2),
       },
       {
         l: 'G',
@@ -142,8 +148,8 @@ export const GUIDES = [
         website: 'https://starkssteakhouse.com/',
         mapsUrl: 'https://maps.google.com/?cid=10956709396423316776',
         hoursNote: '11:30 AM – 9 PM · 4 PM Sat–Sun',
-        x: 23.1, y: 74.7,
-        walk: { artHouse: w(8), hotelE: w(9) },
+        lat: 38.438551, lng: -122.722688,
+        walk: w(9),
       },
       {
         l: 'H',
@@ -157,8 +163,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: 'https://maps.google.com/?cid=?',
         hoursNote: 'Daily · until Midnight',
-        x: 48.4, y: 52.4,
-        walk: { artHouse: w(2), hotelE: w(2) },
+        lat: 38.442114, lng: -122.716871,
+        walk: w(2),
       },
     ],
   },
@@ -180,8 +186,8 @@ export const GUIDES = [
         website: 'http://russianriverbrewing.com/',
         mapsUrl: 'https://maps.google.com/?cid=505373807435157151',
         hoursNote: 'Daily, pub hours',
-        x: 71.1, y: 54.3,
-        walk: { artHouse: w(6), hotelE: w(6) },
+        lat: 38.441806, lng: -122.71165,
+        walk: w(6),
       },
       {
         l: 'B',
@@ -195,8 +201,8 @@ export const GUIDES = [
         website: 'https://www.stonemasoncellars.com/',
         mapsUrl: 'https://maps.google.com/?cid=468132880086871271',
         hoursNote: '11 AM – 7/8 PM',
-        x: 36.0, y: 74.6,
-        walk: { artHouse: w(6), hotelE: w(6) },
+        lat: 38.4385607, lng: -122.7197175,
+        walk: w(6),
       },
       {
         l: 'C',
@@ -210,8 +216,8 @@ export const GUIDES = [
         website: 'http://www.treciniwinery.com/',
         mapsUrl: 'https://maps.google.com/?cid=6049033086509508266',
         hoursNote: 'Mon–Thu 10 AM – 4 PM · closed Fri–Sun',
-        x: 66.5, y: 44.2,
-        walk: { artHouse: w(6), hotelE: w(6) },
+        lat: 38.4434235, lng: -122.7127109,
+        walk: w(6),
       },
       {
         l: 'D',
@@ -224,8 +230,8 @@ export const GUIDES = [
         website: 'http://www.shadyoakbarrelhouse.com/',
         mapsUrl: 'https://maps.google.com/?cid=4304442913741445784',
         hoursNote: 'Taproom hours vary',
-        x: 55.4, y: 83.4,
-        walk: { artHouse: w(7), hotelE: w(6) },
+        lat: 38.4371581, lng: -122.7152567,
+        walk: w(6),
       },
       {
         l: 'E',
@@ -239,8 +245,8 @@ export const GUIDES = [
         website: 'https://www.dargenziowinery.com/',
         mapsUrl: 'https://maps.google.com/?cid=14337380938011327876',
         hoursNote: 'Thu 5–8 PM · Sat–Sun 12–5 PM',
-        x: 6, y: 9,
-        walk: { artHouse: w(17), hotelE: w(18) },
+        lat: 38.4490632, lng: -122.7274724,
+        walk: w(18),
       },
       {
         l: 'F',
@@ -253,8 +259,8 @@ export const GUIDES = [
         website: 'http://www.fogbeltbrewing.com/',
         mapsUrl: 'https://maps.google.com/?cid=9845997062775705815',
         hoursNote: 'Taproom hours vary',
-        x: 6, y: 9,
-        walk: { artHouse: w(16), hotelE: w(17) },
+        lat: 38.4490403, lng: -122.7269424,
+        walk: w(17),
       },
     ],
   },
@@ -275,8 +281,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Closed Mondays',
-        x: 41.9, y: 54.1,
-        walk: { artHouse: w(2), hotelE: w(3) },
+        lat: 38.44185, lng: -122.7183725,
+        walk: w(3),
       },
       {
         l: 'B',
@@ -289,8 +295,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Gardens open daily; house tours seasonal',
-        x: 70.5, y: 89.6,
-        walk: { artHouse: w(10), hotelE: w(9) },
+        lat: 38.4361572, lng: -122.7117766,
+        walk: w(9),
       },
       {
         l: 'C',
@@ -303,7 +309,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Closed Tuesdays',
-        walk: { artHouse: dr(7), hotelE: dr(7) },
+        lat: 38.46037, lng: -122.7359139,
+        walk: dr(7),
       },
       {
         l: 'D',
@@ -315,7 +322,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Event hours vary',
-        walk: { artHouse: dr(13), hotelE: dr(14) },
+        lat: 38.4932027, lng: -122.7495377,
+        walk: dr(14),
       },
       {
         l: 'E',
@@ -328,7 +336,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Tours by reservation',
-        walk: { artHouse: dr(25), hotelE: dr(25) },
+        lat: 38.5569166, lng: -122.6955347,
+        walk: dr(25),
       },
       {
         l: 'F',
@@ -340,7 +349,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Sunrise to sunset',
-        walk: { artHouse: dr(15), hotelE: dr(15) },
+        lat: 38.4522438, lng: -122.6346359,
+        walk: dr(15),
       },
       {
         l: 'G',
@@ -352,7 +362,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Daily, daylight hours',
-        walk: { artHouse: dr(12), hotelE: dr(12) },
+        lat: 38.4500499, lng: -122.6517229,
+        walk: dr(12),
       },
       {
         l: 'H',
@@ -365,7 +376,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Daily, daylight hours',
-        walk: { artHouse: dr(49), hotelE: dr(49) },
+        lat: 38.5370031, lng: -123.0063252,
+        walk: dr(49),
       },
     ],
   },
@@ -386,8 +398,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Always open',
-        x: 51.7, y: 60.0,
-        walk: { artHouse: w(1), hotelE: w(1) },
+        lat: 38.4409, lng: -122.7161,
+        walk: w(1),
       },
       {
         l: 'B',
@@ -400,8 +412,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Always open',
-        x: 33.5, y: 74.4,
-        walk: { artHouse: w(6), hotelE: w(6) },
+        lat: 38.4386, lng: -122.7203,
+        walk: w(6),
       },
       {
         l: 'C',
@@ -414,8 +426,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Shops daily · market May–Jul',
-        x: 58.7, y: 64.4,
-        walk: { artHouse: w(4), hotelE: w(3) },
+        lat: 38.4402, lng: -122.7145,
+        walk: w(3),
       },
       {
         l: 'D',
@@ -427,8 +439,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Closed Mondays',
-        x: 41.9, y: 54.1,
-        walk: { artHouse: w(2), hotelE: w(3) },
+        lat: 38.44185, lng: -122.7183725,
+        walk: w(3),
       },
       {
         l: 'E',
@@ -441,8 +453,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Daylight hours',
-        x: 65.2, y: 81.2,
-        walk: { artHouse: w(7), hotelE: w(6) },
+        lat: 38.4375, lng: -122.713,
+        walk: w(6),
       },
       {
         l: 'F',
@@ -455,8 +467,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Daylight hours',
-        x: 17.4, y: 81.2,
-        walk: { artHouse: w(10), hotelE: w(11) },
+        lat: 38.4375, lng: -122.724,
+        walk: w(11),
       },
       {
         l: 'G',
@@ -468,8 +480,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Café hours',
-        x: 56.5, y: 65.6,
-        walk: { artHouse: w(3), hotelE: w(2) },
+        lat: 38.44, lng: -122.715,
+        walk: w(2),
       },
       {
         l: 'H',
@@ -481,8 +493,8 @@ export const GUIDES = [
         website: null,
         mapsUrl: null,
         hoursNote: 'Bakery hours',
-        x: 60.9, y: 68.7,
-        walk: { artHouse: w(5), hotelE: w(4) },
+        lat: 38.4395, lng: -122.714,
+        walk: w(4),
       },
     ],
   },

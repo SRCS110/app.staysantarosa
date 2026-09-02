@@ -2,7 +2,9 @@ import React from 'react';
 
 // The "ticket stub" sheet — perforated top edge (a row of pill notches cut
 // into the dark panel above it), guide title/count, and the place list.
-export default function StubList({ guide, onOpenPlace }) {
+// Each row opens the place; the +/✓ toggle on the right adds or removes it
+// from the visitor's self-built plan without leaving the list.
+export default function StubList({ guide, onOpenPlace, isInPlan, onTogglePlan }) {
   return (
     <div className="stub-sheet">
       <div className="stub-perforation" aria-hidden="true">
@@ -20,26 +22,39 @@ export default function StubList({ guide, onOpenPlace }) {
         </div>
       </div>
 
-      <p className="stub-caption">walk · Art House / Hotel E</p>
+      <p className="stub-caption">walk · from Courthouse Square</p>
 
       <div className="stub-list">
-        {guide.places.map((p) => (
-          <button key={p.l} type="button" className="stub-row" onClick={() => onOpenPlace(p)}>
-            <span className="stub-letter">{p.l}</span>
-            <span className="stub-info">
-              <span className="stub-name">{p.name}</span>
-              <span className="stub-note">{p.note}</span>
-            </span>
-            <span className="stub-walk">
-              <span>
-                {p.walk.artHouse.min} min{p.walk.artHouse.mode === 'drive' ? ' drive' : ''}
-              </span>
-              <span>
-                {p.walk.hotelE.min} min{p.walk.hotelE.mode === 'drive' ? ' drive' : ''}
-              </span>
-            </span>
-          </button>
-        ))}
+        {guide.places.map((p) => {
+          const inPlan = isInPlan ? isInPlan(p) : false;
+          return (
+            <div key={p.l} className="stub-row">
+              <button type="button" className="stub-row-tap" onClick={() => onOpenPlace(p)}>
+                <span className="stub-letter">{p.l}</span>
+                <span className="stub-info">
+                  <span className="stub-name">{p.name}</span>
+                  <span className="stub-note">{p.note}</span>
+                </span>
+                <span className="stub-walk">
+                  <span>
+                    {p.walk.min} min{p.walk.mode === 'drive' ? ' drive' : ''}
+                  </span>
+                </span>
+              </button>
+              {onTogglePlan && (
+                <button
+                  type="button"
+                  className={`stub-plan-toggle${inPlan ? ' stub-plan-toggle-active' : ''}`}
+                  onClick={() => onTogglePlan(p)}
+                  aria-pressed={inPlan}
+                  aria-label={inPlan ? `Remove ${p.name} from plan` : `Add ${p.name} to plan`}
+                >
+                  {inPlan ? '✓' : '+'}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

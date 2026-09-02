@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ArrowRight, ExternalLink, MapPinIcon } from './icons.jsx';
+import { estimateFrom } from '../lib/geo.js';
 
 const TAG_KIND = ['tag-accent', 'tag-accent-2', 'tag-neutral'];
 
@@ -8,8 +9,18 @@ function directionsUrl(place) {
   return `https://maps.google.com/?q=${encodeURIComponent(place.address || place.name)}`;
 }
 
-export default function PlaceDetail({ place, guideTitle, onBack, onShowOnPlan }) {
-  const hasPin = place.x !== undefined;
+export default function PlaceDetail({
+  place,
+  guideTitle,
+  userLocation,
+  inPlan,
+  visited,
+  onBack,
+  onShowOnPlan,
+  onToggleInPlan,
+  onToggleVisited,
+}) {
+  const liveWalk = userLocation ? estimateFrom(userLocation, place) : null;
 
   return (
     <div className="detail-screen">
@@ -43,44 +54,64 @@ export default function PlaceDetail({ place, guideTitle, onBack, onShowOnPlan })
         {place.hoursNote && <p className="detail-meta detail-meta-muted">{place.hoursNote}</p>}
 
         <div className="detail-walk-cards">
+          {liveWalk && (
+            <div className="walk-card walk-card-live">
+              <span className="walk-card-label">From you</span>
+              <span className="walk-card-value">{liveWalk.min}</span>
+              <span className="walk-card-detail">min {liveWalk.mode}</span>
+            </div>
+          )}
           <div className="walk-card">
-            <span className="walk-card-label">From Art House</span>
-            <span className="walk-card-value">{place.walk.artHouse.min}</span>
-            <span className="walk-card-detail">min {place.walk.artHouse.mode}</span>
-          </div>
-          <div className="walk-card">
-            <span className="walk-card-label">From Hotel E</span>
-            <span className="walk-card-value">{place.walk.hotelE.min}</span>
-            <span className="walk-card-detail">min {place.walk.hotelE.mode}</span>
+            <span className="walk-card-label">From Courthouse Square</span>
+            <span className="walk-card-value">{place.walk.min}</span>
+            <span className="walk-card-detail">min {place.walk.mode}</span>
           </div>
         </div>
 
+        {inPlan && (
+          <button
+            type="button"
+            className={`visited-toggle${visited ? ' visited-toggle-active' : ''}`}
+            onClick={onToggleVisited}
+            aria-pressed={visited}
+          >
+            {visited ? '✓ Visited' : 'Mark as visited'}
+          </button>
+        )}
+
         <div className="detail-actions">
-          {hasPin ? (
-            <button type="button" className="btn btn-primary btn-block detail-primary" onClick={onShowOnPlan}>
-              Show on plan <ArrowRight size={16} />
-            </button>
-          ) : (
-            <a
-              className="btn btn-primary btn-block detail-primary"
-              href={directionsUrl(place)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Get directions <ArrowRight size={16} />
-            </a>
-          )}
+          <button
+            type="button"
+            className={`icon-circle-btn-outline${inPlan ? ' icon-circle-btn-outline-active' : ''}`}
+            onClick={onToggleInPlan}
+            aria-pressed={inPlan}
+            aria-label={inPlan ? 'Remove from plan' : 'Add to plan'}
+            title={inPlan ? 'Remove from plan' : 'Add to plan'}
+          >
+            {inPlan ? '✓' : '+'}
+          </button>
+
+          <button type="button" className="btn btn-primary btn-block detail-primary" onClick={onShowOnPlan}>
+            Show on plan <ArrowRight size={16} />
+          </button>
+
           <a
-            className="icon-circle-btn icon-circle-btn-outline"
+            className="icon-circle-btn-outline"
             href={directionsUrl(place)}
             target="_blank"
             rel="noreferrer"
-            aria-label={hasPin ? 'Get directions' : 'Open website'}
-            title={hasPin ? 'Get directions' : 'Open website'}
+            aria-label="Get directions"
+            title="Get directions"
           >
-            {hasPin ? <MapPinIcon size={20} /> : <ExternalLink size={20} />}
+            <MapPinIcon size={20} />
           </a>
         </div>
+
+        {place.website && (
+          <a className="detail-website-link" href={place.website} target="_blank" rel="noreferrer">
+            Visit website <ExternalLink size={14} />
+          </a>
+        )}
       </div>
     </div>
   );

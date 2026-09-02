@@ -1,69 +1,233 @@
-import React, { useMemo, useState } from 'react';
-import { GUIDES, GUIDES_BY_KEY } from './data/guides.js';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { GUIDES, GUIDES_BY_KEY, HOTELS } from './data/guides.js';
+import { loadPlan, savePlan } from './lib/planStorage.js';
 import PlanPanel from './components/PlanPanel.jsx';
 import GuideChips from './components/GuideChips.jsx';
 import StubList from './components/StubList.jsx';
 import PlaceDetail from './components/PlaceDetail.jsx';
+import FullMapScreen from './components/FullMapScreen.jsx';
 
 export default function App() {
-  // Deliberately minimal state — this app has no accounts and persists
-  // nothing. `guide` picks the active filter; `selectedPlace` opens the
-  // detail screen; `emphasizedName` is a transient plan highlight set by
-  // "Show on plan".
-  const [guide, setGuide] = useState('dining');
-  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [guide, setGuideKey] = useState('dining');
+  const [screen, setScreen] = useState('home'); // 'home' | 'detail' | 'map'
+  const [returnScreen, setReturnScreen] = useState('home');
+  const [selectedPlace, setSelectedPlace] = useState(null); // resolved place + guideKey
   const [emphasizedName, setEmphasizedName] = useState(null);
+
+  const [planStops, setPlanStops] = useState(() => loadPlan());
+  const [mapMode, setMapMode] = useState('pins');
+  const [ringOriginKey, setRingOriginKey] = useState('courthouseSquare');
+
+  const [userLocation, setUserLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState(null);
+  const watchIdRef = useRef(null);
+
+  useEffect(() => {
+    savePlan(planStops);
+  }, [planStops]);
+
+  useEffect(
+    () => () => {
+      if (watchIdRef.current != null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    },
+    []
+  );
 
   const activeGuide = GUIDES_BY_KEY[guide];
 
-  const screen = selectedPlace ? 'detail' : 'home';
+  const planPlaces = useMemo(
+    () =>
+      planStops
+        .map((ref) => {
+          const g = GUIDES_BY_KEY[ref.guideKey];
+          const place = g && g.places.find((p) => p.name === ref.name);
+          return place ? { ...place, guideKey: ref.guideKey, visited: ref.visited } : null;
+        })
+        .filter(Boolean),
+    [planStops]
+  );
 
-  function openPlace(place) {
-    setSelectedPlace(place);
+  function selectGuide(key) {
+    setGuideKey(key);
+    setEmphasizedName(null);
   }
 
-  function backToHome() {
-    setSelectedPlace(null);
+  function openPlace(place, guideKey) {
+    setSelectedPlace({ ...place, guideKey: guideKey || guide });
+    setReturnScreen(screen === 'map' ? 'map' : 'home');
+    setScreen('detail');
+  }
+
+  function backFromDetail() {
+    setScreen(returnScreen);
+  }
+
+  function openFullMap() {
+    setScreen('map');
+  }
+
+  function backFromMap() {
+    setScreen('home');
   }
 
   function showOnPlan() {
     if (selectedPlace) setEmphasizedName(selectedPlace.name);
-    setSelectedPlace(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    window.setTimeout(() => setEmphasizedName(null), 2600);
+    setScreen('map');
+    window.setTimeout(() => setEmphasizedName(null), 3000);
   }
 
-  function selectGuide(key) {
-    setGuide(key);
-    setEmphasizedName(null);
+  function isInPlan(place, guideKey) {
+    return planStops.some((s) => s.guideKey === guideKey && s.name === place.name);
+  }
+
+  function toggleInPlan(place, guideKey) {
+    setPlanStops((prev) => {
+      const exists = prev.some((s) => s.guideKey === guideKey && s.name === place.name);
+      if (exists) return prev.filter((s) => !(s.guideKey === guideKey && s.name === place.name));
+      return [...prev, { guideKey, name: place.name, visited: false }];
+    });
+  }
+
+  function toggleVisited(ref) {
+    setPlanStops((prev) =>
+      prev.map((s) => (s.guideKey === ref.guideKey && s.name === ref.name ? { ...s, visited: !s.visited } : s))
+    );
+  }
+
+  function movePlanStop(index, dir) {
+    setPlanStops((prev) => {
+      const next = prev.slice();
+      const target = index + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function removePlanStop(ref) {
+    setPlanStops((prev) => prev.filter((s) => !(s.guideKey === ref.guideKey && s.name === ref.name)));
+  }
+
+  function clearPlan() {
+    setPlanStops([]);
+  }
+
+  function onLocateToggle() {
+    if (!('geolocation' in navigator)) {
+      setLocateError('Location is not available in this browser.');
+      return;
+    }
+    if (locating) {
+      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      setLocating(false);
+      setUserLocation(null);
+      return;
+    }
+    setLocateError(null);
+    setLocating(true);
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        });
+        setLocateError(null);
+      },
+      (err) => {
+        setLocating(false);
+        setLocateError(err.code === 1 ? 'Location permission denied.' : 'Could not get your location.');
+      },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+    );
   }
 
   return (
     <div className="app-shell">
-      {screen === 'home' ? (
+      {screen === 'home' && (
         <div className="home-screen">
           <div className="home-topbar">
             <span className="home-kicker">Santa Rosa · Sonoma Wine Country</span>
             <span className="home-free-pill">Free · No sign-in</span>
           </div>
 
-          <PlanPanel
-            places={activeGuide.places}
-            activeGuideLabel={activeGuide.title}
-            emphasizedPlaceId={emphasizedName}
-            onPinTap={openPlace}
-          />
+          <div className="home-map-frame">
+            <PlanPanel
+              places={activeGuide.places}
+              guideKey={guide}
+              hotels={HOTELS}
+              userLocation={userLocation}
+              activeGuideLabel={activeGuide.title}
+              emphasizedPlaceId={emphasizedName}
+              onPinTap={(p) => openPlace(p, guide)}
+              locating={locating}
+              onLocateToggle={onLocateToggle}
+              locateError={locateError}
+            />
+            <button type="button" className="home-map-expand" onClick={openFullMap}>
+              Full map
+            </button>
+            {planPlaces.length > 0 && (
+              <button type="button" className="home-plan-pill" onClick={openFullMap}>
+                My Plan · {planPlaces.length}
+              </button>
+            )}
+          </div>
 
           <GuideChips activeKey={guide} onSelect={selectGuide} />
 
-          <StubList guide={activeGuide} onOpenPlace={openPlace} />
+          <StubList
+            guide={activeGuide}
+            onOpenPlace={(p) => openPlace(p, guide)}
+            isInPlan={(p) => isInPlan(p, guide)}
+            onTogglePlan={(p) => toggleInPlan(p, guide)}
+          />
         </div>
-      ) : (
+      )}
+
+      {screen === 'detail' && selectedPlace && (
         <PlaceDetail
           place={selectedPlace}
-          guideTitle={activeGuide.title}
-          onBack={backToHome}
+          guideTitle={GUIDES_BY_KEY[selectedPlace.guideKey].title}
+          userLocation={userLocation}
+          inPlan={isInPlan(selectedPlace, selectedPlace.guideKey)}
+          visited={planStops.some(
+            (s) => s.guideKey === selectedPlace.guideKey && s.name === selectedPlace.name && s.visited
+          )}
+          onBack={backFromDetail}
           onShowOnPlan={showOnPlan}
+          onToggleInPlan={() => toggleInPlan(selectedPlace, selectedPlace.guideKey)}
+          onToggleVisited={() => toggleVisited({ guideKey: selectedPlace.guideKey, name: selectedPlace.name })}
+        />
+      )}
+
+      {screen === 'map' && (
+        <FullMapScreen
+          guide={activeGuide}
+          activeGuideKey={guide}
+          onSelectGuide={selectGuide}
+          places={activeGuide.places}
+          planPlaces={planPlaces}
+          hotels={HOTELS}
+          userLocation={userLocation}
+          locating={locating}
+          onLocateToggle={onLocateToggle}
+          locateError={locateError}
+          emphasizedName={emphasizedName}
+          onBack={backFromMap}
+          onOpenPlace={openPlace}
+          onToggleVisited={toggleVisited}
+          onMovePlan={movePlanStop}
+          onRemovePlan={removePlanStop}
+          onClearPlan={clearPlan}
+          mapMode={mapMode}
+          onSetMapMode={setMapMode}
+          ringOriginKey={ringOriginKey}
+          onSetRingOriginKey={setRingOriginKey}
         />
       )}
     </div>
