@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { Compass } from './icons.jsx';
 import { RING_MINUTES, ringRadiusMeters } from '../lib/geo.js';
@@ -95,8 +95,6 @@ export default function MapView({
   const userMarkerRef = useRef(null);
   const hasCenteredOnUser = useRef(false);
   const lastFitKey = useRef(null);
-  const [gestureHint, setGestureHint] = useState(null); // 'touch' | 'wheel' | null
-  const hintTimerRef = useRef(null);
 
   // Init the map once.
   useEffect(() => {
@@ -124,56 +122,6 @@ export default function MapView({
       layerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Cooperative gesture handling — the map now sits inline in a page that
-  // scrolls, so it can't grab every touch/wheel gesture the way a true
-  // fullscreen map could. Touch: a single finger passes through untouched
-  // (native page scroll), two fingers pan/pinch-zoom as normal — Leaflet's
-  // own drag/zoom handlers stay enabled throughout; we only stop a
-  // single-finger touchmove from ever reaching them, intercepted on the
-  // document in the capture phase so it beats Leaflet's own listeners
-  // regardless of attachment order. Wheel: plain scroll passes through to
-  // the page; Ctrl/Cmd+scroll zooms the map, the same convention embedded
-  // Google Maps uses.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const container = map.getContainer();
-    map.scrollWheelZoom.disable();
-
-    function flashHint(kind) {
-      setGestureHint(kind);
-      if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
-      hintTimerRef.current = window.setTimeout(() => setGestureHint(null), 1100);
-    }
-
-    function onTouchMoveCapture(e) {
-      if (!container.contains(e.target)) return;
-      if (e.touches && e.touches.length === 1) {
-        e.stopPropagation();
-        flashHint('touch');
-      }
-    }
-
-    function onWheel(e) {
-      if (!container.contains(e.target)) return;
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = e.deltaY < 0 ? 1 : -1;
-        map.setZoom(map.getZoom() + delta, { animate: true });
-      } else {
-        flashHint('wheel');
-      }
-    }
-
-    document.addEventListener('touchmove', onTouchMoveCapture, { capture: true, passive: true });
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => {
-      document.removeEventListener('touchmove', onTouchMoveCapture, { capture: true });
-      container.removeEventListener('wheel', onWheel);
-      if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
-    };
   }, []);
 
   // A Leaflet map born inside a flex/animated layout often measures itself
@@ -327,9 +275,6 @@ export default function MapView({
           <span>{locateError}</span>
         </div>
       )}
-      <div className={`map-gesture-hint${gestureHint ? ' map-gesture-hint-visible' : ''}`} aria-hidden="true">
-        {gestureHint === 'wheel' ? 'Use ⌘/Ctrl + scroll to zoom the map' : 'Use two fingers to move the map'}
-      </div>
     </div>
   );
 }

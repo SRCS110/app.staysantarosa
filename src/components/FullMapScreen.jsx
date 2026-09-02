@@ -4,13 +4,13 @@ import GuideChips from './GuideChips.jsx';
 import RingOriginSheet from './RingOriginSheet.jsx';
 import { haversineMiles, walkMinutes, driveMinutes } from '../lib/geo.js';
 
-// The Map tab — everything shown relative to you. It's a normal part of
-// the scrolling page (not a fixed-viewport panel): the map sits in a
-// fixed-height section up top — panned/zoomed with two fingers, a mouse
-// drag, or Ctrl/Cmd+scroll, so a plain one-finger swipe or scroll always
-// falls through to the page — and, in Rings mode, the origin switcher
-// sits in normal flow right underneath it. The plan itself lives on its
-// own Plan tab now, not docked under the map.
+// The Map tab — everything shown relative to you. The screen is pinned to
+// exactly one viewport height (no page scroll): topbar + chips take their
+// natural height, and the map fills every remaining pixel below them —
+// standard Leaflet touch/wheel handling, any touch pans it. In Rings mode
+// the origin switcher docks below the map (its own internal scroll if it
+// runs long) instead of eating into the map's height when it isn't shown.
+// The plan itself lives on its own Plan tab now, not docked under the map.
 export default function FullMapScreen({
   activeGuideKey,
   onSelectGuide,
