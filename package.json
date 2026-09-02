@@ -1,0 +1,20 @@
+{
+  "name": "stay-santa-rosa-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Stay Santa Rosa — a free, no-account mobile guide app for Art House Santa Rosa and Hotel E guests: illustrated downtown plan + four curated guides with walking time from each hotel.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}
