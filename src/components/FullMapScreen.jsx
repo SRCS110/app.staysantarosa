@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import MapView from './MapView.jsx';
 import { haversineMiles, walkMinutes, driveMinutes } from '../lib/geo.js';
 
 // The Map tab — your plan, and only your plan, on the real map. No guide
 // browsing here (that's what Build's list and mini map are for) and no
 // Pins/Rings mode toggle — just the stops you've added, each as a labeled
-// card, with a route line between them and a Next stop banner. The screen
-// is pinned to exactly one viewport height (no page scroll): topbar takes
-// its natural height, the map fills every remaining pixel below it.
+// card, with a route line between them and a Next stop banner. A day
+// filter (All / Day 1 / Day 2 / ...) narrows the route down to one day
+// at a time for a multi-day trip; "All" keeps every stop, colored by day.
+// The screen is pinned to exactly one viewport height (no page scroll):
+// topbar + day chips take their natural height, the map fills the rest.
 export default function FullMapScreen({
   planPlaces,
+  trip,
   hotels,
   userLocation,
   locating,
@@ -20,6 +23,18 @@ export default function FullMapScreen({
   homeOrigin,
   homeOriginLabel,
 }) {
+  const tripDays = Math.max(1, trip?.days || 1);
+  const [selectedDay, setSelectedDay] = useState(0); // 0 = All
+
+  const sortedPlaces = useMemo(
+    () => planPlaces.slice().sort((a, b) => (a.day || 1) - (b.day || 1) || (a.order ?? 0) - (b.order ?? 0)),
+    [planPlaces]
+  );
+  const visiblePlaces = useMemo(
+    () => (selectedDay === 0 ? sortedPlaces : sortedPlaces.filter((p) => (p.day || 1) === selectedDay)),
+    [sortedPlaces, selectedDay]
+  );
+
   const nextStop = planPlaces.find((p) => !p.visited);
   let nextStopDistance = null;
   if (nextStop) {
@@ -39,15 +54,37 @@ export default function FullMapScreen({
         </span>
       </div>
 
+      {planPlaces.length > 0 && tripDays > 1 && (
+        <div className="full-map-day-chips">
+          <button
+            type="button"
+            className={`full-map-day-chip${selectedDay === 0 ? ' full-map-day-chip-active' : ''}`}
+            onClick={() => setSelectedDay(0)}
+          >
+            All
+          </button>
+          {Array.from({ length: tripDays }, (_, i) => i + 1).map((d) => (
+            <button
+              key={d}
+              type="button"
+              className={`full-map-day-chip${selectedDay === d ? ' full-map-day-chip-active' : ''}`}
+              onClick={() => setSelectedDay(d)}
+            >
+              Day {d}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="full-map-canvas-wrap">
         <MapView
-          planPlaces={planPlaces}
+          planPlaces={visiblePlaces}
           hotels={hotels}
           userLocation={userLocation}
           emphasizedName={emphasizedName}
           onPinTap={(place, guideKey) => onOpenPlace(place, guideKey)}
           fullscreen
-          fitKey={`plan:${planPlaces.map((p) => p.name).join('|')}`}
+          fitKey={`plan:${selectedDay}:${visiblePlaces.map((p) => p.name).join('|')}`}
           locating={locating}
           onLocateToggle={onLocateToggle}
           locateError={locateError}

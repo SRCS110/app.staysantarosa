@@ -214,6 +214,38 @@ export function GuideIcon({ guideKey, size = 18, ...rest }) {
   return Icon ? <Icon size={size} {...rest} /> : null;
 }
 
+export function GripIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} fill="currentColor" stroke="none" {...rest}>
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
+    </svg>
+  );
+}
+
+export function WandIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4 20L18 6" />
+      <path d="M15 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" />
+      <path d="M5 13l.7 1.3L7 15l-1.3.7L5 17l-.7-1.3L3 15l1.3-.7z" />
+    </svg>
+  );
+}
+
+export function PencilIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4 20l.9-4L16.5 4.4a1.8 1.8 0 0 1 2.6 0l.5.5a1.8 1.8 0 0 1 0 2.6L8 19l-4 1z" />
+      <path d="M14.5 6.5l3 3" />
+    </svg>
+  );
+}
+
 // ── Bottom nav glyphs — Build (browse/discover), Plan (the itinerary),
 // Map (everything relative to you).
 

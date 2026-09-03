@@ -1,6 +1,6 @@
 # Stay Santa Rosa — City Guide (mobile app)
 
-A free, no-account mobile guide for Art House Santa Rosa and Hotel E guests: a real interactive map, four curated guides (Dining, Wine & Beer, Attractions, Events), a self-built walking plan with Google Maps handoff and a shareable link, opt-in live location tracking, and a set of retention features layered on top — curated itineraries, "Open now," staff-pick badges, a rainy-day nudge, install-to-home-screen, and foreground closing-soon reminders. Built on the Organic design system (direction 1b, "Ticket stub"), with the client's softer-white background override baked in. Each guide has its own category glyph (fork & knife, wine glass, mask, calendar) used on the list badges, chip row, and map pins in place of generic letters.
+A free, no-account guide and full itinerary builder for Art House Santa Rosa and Hotel E guests: a real interactive map, four curated guides (Dining, Wine & Beer, Attractions, Events), a day-by-day trip planner with auto-arranged stops, suggested times, drag-to-reorder, Google Maps handoff and a shareable link, opt-in live location tracking, and a set of retention features layered on top — curated itineraries, "Open now," staff-pick badges, a rainy-day nudge, install-to-home-screen, and foreground closing-soon reminders. Responsive from phone to desktop — a floating bottom nav and stacked layout below ~900px, a sidebar nav with a side-by-side map/list and kanban-style day columns above it. Built on the Organic design system (direction 1b, "Ticket stub"), with the client's softer-white background override baked in. Each guide has its own category glyph (fork & knife, wine glass, mask, calendar) used on the list badges, chip row, and map pins in place of generic letters.
 
 ## Run it
 
@@ -16,14 +16,18 @@ Open the printed local URL — resize the browser to phone width, or use its dev
 A rounded, frosted-glass nav floats over the bottom of every screen with three tabs — switching between them doesn't push a new screen or lose scroll position, it's a flat tab switch:
 
 1. **Build** — the old home screen: a small live map (real OpenStreetMap/CARTO tiles via Leaflet, not a drawing) at the top, an install banner and rainy-day nudge when they apply, a row of curated-itinerary cards, the four guide filter chips, a secondary row of tag filter chips (built from whatever tags the active guide's places actually carry), and the place list. Tap **+** on any row to add that place to your plan without leaving the list.
-2. **Plan** — your self-built itinerary on its own page, no map underneath. Numbered stops, tap a stop's number to mark it visited, reorder with ↑/↓, remove or clear stops, **Share** the plan as a link, and hand the whole route to Google Maps as a multi-stop walking route (`Open in Google Maps`, up to ~8 waypoints). The bottom nav's Plan tab shows a live stop count badge.
-3. **Map** — your plan, and only your plan, on the real map, filling the whole viewport: a topbar (with a live stop count) at the top, the map taking every remaining pixel below it (standard Leaflet touch/wheel handling — any touch pans it, pinch or scroll zooms it, no gesture gating). No guide browsing here — that's what Build's list and mini map are for — so each stop renders as a labeled card (number + category glyph + the place's own name) rather than a bare pin, linked by a route line, plus a **Next stop** banner (distance from your live location if it's on, otherwise from your chosen home hotel). An empty plan shows a hint to add places from Build instead of a blank map.
+2. **Plan** — your day-by-day itinerary, grouped into **Day 1, Day 2, …** columns (however many days you said you're in town for). Each stop shows a suggested time, drag its grip handle to reorder within a day or move it to a different day, tap a stop to mark it visited, remove or clear stops, **Auto-arrange** to re-run the planner from scratch, **Share** the plan as a link, edit your trip length any time, and hand each day to Google Maps as its own multi-stop walking route. The bottom nav's Plan tab shows a live stop count badge.
+3. **Map** — your plan, and only your plan, on the real map, filling the whole viewport: a topbar (live stop count) and, for a multi-day trip, a row of **All / Day 1 / Day 2 / …** filter chips, then the map taking every remaining pixel below (standard Leaflet touch/wheel handling — any touch pans it, pinch or scroll zooms it, no gesture gating). No guide browsing here — that's what Build's list and mini map are for — so each stop renders as a labeled card (number + category glyph + the place's own name, tinted by day when "All" is selected) rather than a bare pin, linked by a route line, plus a **Next stop** banner (distance from your live location if it's on, otherwise from your chosen home hotel). An empty plan shows a hint to add places from Build instead of a blank map.
 
 Tapping a place (from Build's list or Map's pins) opens **Place detail** as a full-screen overlay on top of the current tab — a badge row (real rating/review count, a staff-pick badge, dog-friendly, and an Open now/Closes at line for dining places with real hours), photo plate, tags, description, walking/driving time from your home hotel (and a third live card, "From you," once location is on), an **Add to plan** button, a **Mark as visited** toggle once it's in your plan, an outlined pin button for turn-by-turn directions, and a phone button that dials straight from the app when a number's on file. Its back arrow returns to whichever tab you opened it from; the bottom nav hides while it's open.
 
 ## Home hotel & personalized distances
 
 The first time the app opens, a one-time sheet asks which hotel you're staying at (or lets you skip it). Answering swaps every walk/drive time app-wide — Build's list, Place detail, the Map tab's Next-stop banner, Plan's Google Maps origin — from the shared Old Courthouse Square default (already baked into `guides.js`) to a live estimate from Art House, computed the same way the "From you" live-location card already was (`lib/geo.js`'s `estimateFrom`). The choice lives in `localStorage` (`ssr-home-hotel-v1`) — nothing is sent anywhere, and skipping just keeps the existing Courthouse Square numbers.
+
+## Full itinerary builder
+
+A second one-time sheet (right after the hotel question) asks how many days you're in town, plus an optional arrival date — reopenable any time from Plan's "Trip length" button. `lib/itineraryPlanner.js` then auto-arranges your plan into those day columns: it groups stops geographically (a light k-means over lat/lng, closest area first) so each day stays walkable instead of zig-zagging across town, orders each day breakfast → morning → lunch → wine/afternoon → dinner → evening using real hours data where it exists, and derives a suggested clock time per stop by walking the day forward from 9 AM with real travel time (`lib/geo.js`) plus a per-category dwell estimate — never stored, always recomputed from whatever order is current. An event with its own real calendar date (and an arrival date on file) is pinned to the matching day instead of clustered, and shows its own real time rather than a derived one. Auto-arrange is a deliberate action (the Plan tab's button) — it never runs itself and never overwrites a manual drag until you ask it to. Drag-to-reorder works within a day or across days (touch and mouse, via Pointer Events) and always wins over the suggestion. Shared plan links now carry each stop's day and position, so whoever opens the link gets the same day-by-day trip, not just a flat list.
 
 ## Curated itineraries
 
@@ -67,6 +71,10 @@ Stops you add live in `localStorage` under `ssr-plan-v1` — nothing leaves the 
 
 Before shipping: get a verified coordinate for Courthouse Square/Art House (currently estimated from the site's own "N min walk to X" copy); replace photo placeholders; and double-check hours, phones, ratings and "closed" days, which change.
 
+## Desktop version
+
+The same app, no separate build — everything above ~900px wide switches from the floating bottom nav to a fixed left sidebar, Build's map pins to the right of a scrollable place list instead of sitting above it, and the Plan tab's day sections lay out side by side as scrollable columns instead of stacking, so a multi-day trip reads like a board at a glance. First-run and trip-length sheets center on screen instead of anchoring to the bottom edge. It's all CSS media queries (`src/styles/app.css`, the block at the bottom) plus two small layout wrapper elements in `App.jsx` — no separate desktop build, no JS branching on screen size.
+
 ## Structure
 
 - `src/data/guides.js` — the whole content bundle (4 guides × places, each with lat/lng). Edit this file to add/remove/edit places.
@@ -78,8 +86,11 @@ Before shipping: get a verified coordinate for Courthouse Square/Art House (curr
 - `src/lib/weather.js` — no-key open-meteo fetch for the rainy-day nudge.
 - `src/lib/share.js` — encode/decode a plan into/from a URL param.
 - `src/lib/notify.js` — foreground-only closing-soon reminders.
-- `src/lib/planStorage.js` — localStorage read/write for the plan.
-- `src/components/BottomNav.jsx` — the floating Build/Plan/Map tab bar.
+- `src/lib/planStorage.js` — localStorage read/write for the plan (now with each stop's day + order).
+- `src/lib/tripStorage.js` — localStorage read/write for trip length + optional start date.
+- `src/lib/itineraryPlanner.js` — the auto-arrange algorithm: geographic day-clustering, meal/time-of-day ordering, suggested-time derivation.
+- `src/components/TripPicker.jsx` — the first-run/"Trip length" trip-setup sheet.
+- `src/components/BottomNav.jsx` — the floating Build/Plan/Map tab bar (a left sidebar on desktop, see above).
 - `src/components/MapView.jsx` — the real Leaflet map, used both small (Build tab, browsing the active guide's pins) and full-bleed (Map tab, plan stops only, rendered as labeled cards).
 - `src/components/PlanPanel.jsx` — Build tab's mini map wrapper.
 - `src/components/GuideChips.jsx` / `StubList.jsx` — the four filter chips, the per-guide tag filter row, and the perforated "ticket stub" place list (with the plan +/✓ toggle, Open now dot, and rating).

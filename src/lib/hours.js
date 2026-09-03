@@ -45,6 +45,25 @@ function parseDayRanges(dayStr) {
     .filter(Boolean);
 }
 
+// A coarse "when does this place tend to be open" hint used only for
+// itinerary ordering (lib/itineraryPlanner.js) — not shown to the visitor.
+// 'breakfast' = opens before 8 AM any day; 'dinner' = never opens before
+// 3 PM; 'lunch' = everything in between (including typical all-day
+// places). Returns null when there's no hours data to go on.
+export function mealSlotHint(hours) {
+  if (!hours) return null;
+  let earliestStart = Infinity;
+  for (const day of DAYS) {
+    for (const [start] of parseDayRanges(hours[day])) {
+      if (start < earliestStart) earliestStart = start;
+    }
+  }
+  if (!Number.isFinite(earliestStart)) return null;
+  if (earliestStart < 8 * 60) return 'breakfast';
+  if (earliestStart >= 15 * 60) return 'dinner';
+  return 'lunch';
+}
+
 export function formatMinutes(totalMinutes) {
   const m = ((totalMinutes % 1440) + 1440) % 1440;
   let hour = Math.floor(m / 60);

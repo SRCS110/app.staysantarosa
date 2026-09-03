@@ -66,13 +66,23 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// Rotates through a small set of day colors so a multi-day itinerary
+// (viewed with the Map tab's "All" filter) reads at a glance which stops
+// belong to which day, without needing to tap each one.
+const DAY_PALETTE = ['#c67139', '#4f7a9c', '#8a6fa8', '#93832f', '#3f8f74', '#b2567a'];
+export function dayColor(day) {
+  if (!day) return COLORS.accent;
+  return DAY_PALETTE[(day - 1) % DAY_PALETTE.length];
+}
+
 // A plan stop's marker: a small labeled card (number + category glyph + the
 // place's own name) rather than a bare numbered dot — readable straight off
 // the map without a tap, and each stop keeps its own guide's glyph even when
-// the plan mixes dining/wine/attractions/events stops together.
-function planCardIcon(glyph, name, number, emphasized) {
+// the plan mixes dining/wine/attractions/events stops together. The left
+// edge picks up that stop's day color so a multi-day route stays readable.
+function planCardIcon(glyph, name, number, emphasized, color) {
   return L.divIcon({
-    html: `<div class="map-plan-card${emphasized ? ' map-plan-card-emphasized' : ''}"><span class="map-plan-card-badge">${number}</span><span class="map-plan-card-glyph">${glyph}</span><span class="map-plan-card-name">${escapeHtml(name)}</span></div>`,
+    html: `<div class="map-plan-card${emphasized ? ' map-plan-card-emphasized' : ''}"><span class="map-plan-card-badge" style="background:${color}">${number}</span><span class="map-plan-card-glyph">${glyph}</span><span class="map-plan-card-name">${escapeHtml(name)}</span></div>`,
     className: 'map-marker-wrap',
     iconAnchor: [-6, 12],
   });
@@ -175,8 +185,9 @@ export default function MapView({
       const line = [];
       planPlaces.forEach((p, i) => {
         const glyph = categoryGlyph(p.guideKey, 12);
+        const color = dayColor(p.day);
         const marker = L.marker([p.lat, p.lng], {
-          icon: planCardIcon(glyph, p.name, i + 1, p.name === emphasizedName),
+          icon: planCardIcon(glyph, p.name, i + 1, p.name === emphasizedName, color),
         });
         marker.on('click', () => onPinTap && onPinTap(p, p.guideKey));
         layer.addLayer(marker);

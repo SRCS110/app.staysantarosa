@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GUIDES_BY_KEY, HOTELS } from './data/guides.js';
 import { ITINERARIES } from './data/itineraries.js';
 import { loadPlan, savePlan } from './lib/planStorage.js';
+import { loadTrip, saveTrip, hasAskedTrip, markAskedTrip } from './lib/tripStorage.js';
+import { autoArrangePlan } from './lib/itineraryPlanner.js';
 import { estimateFrom } from './lib/geo.js';
 import { sortUpcomingEvents } from './lib/events.js';
 import { loadHomeHotelKey, saveHomeHotelKey, hasAskedHomeHotel, markAskedHomeHotel } from './lib/hotelStorage.js';
@@ -16,12 +18,15 @@ import FullMapScreen from './components/FullMapScreen.jsx';
 import PlanScreen from './components/PlanScreen.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import HotelPicker from './components/HotelPicker.jsx';
+import TripPicker from './components/TripPicker.jsx';
 import InstallPrompt from './components/InstallPrompt.jsx';
 import WeatherNudge from './components/WeatherNudge.jsx';
 import ItineraryPicks from './components/ItineraryPicks.jsx';
 import OfflineBanner from './components/OfflineBanner.jsx';
 import { BellIcon, BellOffIcon } from './components/icons.jsx';
 import { isNotifyEnabled, enableNotify, disableNotify, isNotifySupported } from './lib/notify.js';
+
+const stopKey = (s) => `${s.guideKey}:${s.name}`;
 
 export default function App() {
   const [guide, setGuideKey] = useState('dining');
@@ -43,6 +48,13 @@ export default function App() {
   // already baked into guides.js when skipped or unanswered.
   const [homeHotelKey, setHomeHotelKey] = useState(() => loadHomeHotelKey());
   const [showHotelPicker, setShowHotelPicker] = useState(() => !hasAskedHomeHotel());
+
+  // How many days the visitor is in town — powers the Plan tab's day
+  // columns and lib/itineraryPlanner.js's auto-arrange. Asked once, right
+  // after the hotel question (never both sheets at once), reopenable
+  // later from the Plan tab's "Trip length" button.
+  const [trip, setTrip] = useState(() => loadTrip());
+  const [showTripPicker, setShowTripPicker] = useState(() => hasAskedHomeHotel() && !hasAskedTrip());
 
   // Install-to-home-screen: only ever shown once the browser has actually
   // offered a beforeinstallprompt (Chrome/Android/Edge) — iOS Safari never
@@ -146,14 +158,17 @@ export default function App() {
           const place = g && g.places.find((p) => p.name === ref.name);
           if (!place) return null;
           const walk = homeHotel ? estimateFrom(homeHotel, place) : place.walk;
-          return { ...place, guideKey: ref.guideKey, visited: ref.visited, walk };
+          return { ...place, guideKey: ref.guideKey, visited: ref.visited, day: ref.day || 1, order: ref.order ?? 0, walk };
         })
         .filter(Boolean),
     [planStops, homeHotel]
   );
 
   useEffect(() => {
-    nextUnvisitedRef.current = planPlaces.find((p) => !p.visited) || null;
+    nextUnvisitedRef.current = planPlaces
+      .slice()
+      .sort((a, b) => a.day - b.day || a.order - b.order)
+      .find((p) => !p.visited) || null;
   }, [planPlaces]);
 
   const indoorAttractions = useMemo(
@@ -183,17 +198,39 @@ export default function App() {
     setPlanStops((prev) => {
       const exists = prev.some((s) => s.guideKey === guideKey && s.name === place.name);
       if (exists) return prev.filter((s) => !(s.guideKey === guideKey && s.name === place.name));
-      return [...prev, { guideKey, name: place.name, visited: false }];
+      const day = 1;
+      const order = prev.filter((s) => (s.day || 1) === day).length;
+      return [...prev, { guideKey, name: place.name, visited: false, day, order }];
     });
   }
 
-  // Additive only — used by the curated itinerary "Add all" buttons.
-  // Anything already in the plan is left exactly as it is, not duplicated
-  // or reordered.
+  // Additive only — used by the curated itinerary "Add all" buttons and by
+  // accepting a shared plan. Anything already in the plan is left exactly
+  // as it is, not duplicated or reordered. A shared plan's refs already
+  // carry day/order (the sharer's own arrangement) and keep them; a
+  // curated itinerary's refs don't, so those default to Day 1, appended.
   function addManyToPlan(refs) {
     setPlanStops((prev) => {
       const existing = new Set(prev.map((s) => `${s.guideKey}:${s.name}`));
-      const additions = refs.filter((r) => !existing.has(`${r.guideKey}:${r.name}`)).map((r) => ({ ...r, visited: false }));
+      let day1Count = prev.filter((s) => (s.day || 1) === 1).length;
+      const additions = [];
+      refs.forEach((r) => {
+        const key = `${r.guideKey}:${r.name}`;
+        if (existing.has(key)) return;
+        existing.add(key);
+        if (Number.isFinite(r.day)) {
+          additions.push({
+            guideKey: r.guideKey,
+            name: r.name,
+            visited: false,
+            day: r.day,
+            order: Number.isFinite(r.order) ? r.order : 0,
+          });
+        } else {
+          additions.push({ guideKey: r.guideKey, name: r.name, visited: false, day: 1, order: day1Count });
+          day1Count += 1;
+        }
+      });
       return additions.length ? [...prev, ...additions] : prev;
     });
   }
@@ -208,13 +245,38 @@ export default function App() {
     );
   }
 
-  function movePlanStop(index, dir) {
+  // Drag-reorder in PlanSheet hands back the whole plan's new day/order
+  // assignment in one shot once a drag is released.
+  function reorderPlan(flatList) {
     setPlanStops((prev) => {
-      const next = prev.slice();
-      const target = index + dir;
-      if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
+      const byKey = new Map(flatList.map((f) => [`${f.guideKey}:${f.name}`, f]));
+      return prev.map((s) => {
+        const next = byKey.get(`${s.guideKey}:${s.name}`);
+        return next ? { ...s, day: next.day, order: next.order } : s;
+      });
+    });
+  }
+
+  // Re-runs the itinerary planner over the current plan from scratch —
+  // discards any manual dragging in favor of the geography/time-of-day
+  // suggestion. A deliberate action (the Plan tab's "Auto-arrange"
+  // button), never triggered automatically.
+  function autoArrange() {
+    setPlanStops((prev) => {
+      const resolved = prev
+        .map((ref) => {
+          const g = GUIDES_BY_KEY[ref.guideKey];
+          const place = g && g.places.find((p) => p.name === ref.name);
+          return place ? { ...place, guideKey: ref.guideKey } : null;
+        })
+        .filter(Boolean);
+      if (!resolved.length) return prev;
+      const arranged = autoArrangePlan(resolved, trip, homeOrigin);
+      const byKey = new Map(arranged.map((a) => [`${a.guideKey}:${a.name}`, a]));
+      return prev.map((s) => {
+        const a = byKey.get(`${s.guideKey}:${s.name}`);
+        return a ? { ...s, day: a.day, order: a.order } : s;
+      });
     });
   }
 
@@ -255,16 +317,33 @@ export default function App() {
     clearSharedPlanFromUrl();
   }
 
+  function afterHotelPicker() {
+    setShowHotelPicker(false);
+    if (!hasAskedTrip()) setShowTripPicker(true);
+  }
+
   function pickHomeHotel(key) {
     setHomeHotelKey(key);
     saveHomeHotelKey(key);
     markAskedHomeHotel();
-    setShowHotelPicker(false);
+    afterHotelPicker();
   }
 
   function skipHomeHotel() {
     markAskedHomeHotel();
-    setShowHotelPicker(false);
+    afterHotelPicker();
+  }
+
+  function saveTripChoice(newTrip) {
+    setTrip(newTrip);
+    saveTrip(newTrip);
+    markAskedTrip();
+    setShowTripPicker(false);
+  }
+
+  function skipTripPicker() {
+    markAskedTrip();
+    setShowTripPicker(false);
   }
 
   async function handleInstall() {
@@ -337,7 +416,7 @@ export default function App() {
                 </button>
               )}
               <span className="home-free-pill">
-                {planPlaces.length ? `My Plan · ${planPlaces.length}` : 'Free · No sign-in'}
+                {planPlaces.length ? `My Trip · ${planPlaces.length}` : 'Free · No sign-in'}
               </span>
             </span>
           </div>
@@ -371,51 +450,59 @@ export default function App() {
             />
           )}
 
-          <div className="home-map-frame">
-            <PlanPanel
-              places={displayPlaces}
-              guideKey={guide}
-              hotels={HOTELS}
-              userLocation={userLocation}
-              activeGuideLabel={activeGuide.title}
-              emphasizedPlaceId={emphasizedName}
-              onPinTap={(p) => openPlace(p, guide)}
-              locating={locating}
-              onLocateToggle={onLocateToggle}
-              locateError={locateError}
-            />
+          <div className="home-main-row">
+            <div className="home-map-frame">
+              <PlanPanel
+                places={displayPlaces}
+                guideKey={guide}
+                hotels={HOTELS}
+                userLocation={userLocation}
+                activeGuideLabel={activeGuide.title}
+                emphasizedPlaceId={emphasizedName}
+                onPinTap={(p) => openPlace(p, guide)}
+                locating={locating}
+                onLocateToggle={onLocateToggle}
+                locateError={locateError}
+              />
+            </div>
+
+            <div className="home-list-col">
+              <GuideChips activeKey={guide} onSelect={selectGuide} />
+
+              <ItineraryPicks itineraries={ITINERARIES} isFullyAdded={isFullyAdded} onAddAll={addManyToPlan} />
+
+              <StubList
+                guide={guideForList}
+                onOpenPlace={(p) => openPlace(p, guide)}
+                isInPlan={(p) => isInPlan(p, guide)}
+                onTogglePlan={(p) => toggleInPlan(p, guide)}
+                homeLabel={homeHotel ? homeHotel.name : 'Courthouse Square'}
+              />
+            </div>
           </div>
-
-          <GuideChips activeKey={guide} onSelect={selectGuide} />
-
-          <ItineraryPicks itineraries={ITINERARIES} isFullyAdded={isFullyAdded} onAddAll={addManyToPlan} />
-
-          <StubList
-            guide={guideForList}
-            onOpenPlace={(p) => openPlace(p, guide)}
-            isInPlan={(p) => isInPlan(p, guide)}
-            onTogglePlan={(p) => toggleInPlan(p, guide)}
-            homeLabel={homeHotel ? homeHotel.name : 'Courthouse Square'}
-          />
         </div>
       )}
 
       {view === 'tabs' && activeTab === 'plan' && (
         <PlanScreen
           stops={planPlaces}
+          trip={trip}
           origin={userLocation || homeOrigin}
           onOpenPlace={(s) => openPlace(s, s.guideKey)}
           onToggleVisited={toggleVisited}
-          onMove={movePlanStop}
           onRemove={removePlanStop}
           onClear={clearPlan}
           onShare={handleShare}
+          onReorder={reorderPlan}
+          onAutoArrange={autoArrange}
+          onEditTrip={() => setShowTripPicker(true)}
         />
       )}
 
       {view === 'tabs' && activeTab === 'map' && (
         <FullMapScreen
           planPlaces={planPlaces}
+          trip={trip}
           hotels={HOTELS}
           userLocation={userLocation}
           locating={locating}
@@ -449,6 +536,9 @@ export default function App() {
       )}
 
       {showHotelPicker && <HotelPicker hotels={HOTELS} onPick={pickHomeHotel} onSkip={skipHomeHotel} />}
+      {!showHotelPicker && showTripPicker && (
+        <TripPicker trip={trip} onSave={saveTripChoice} onSkip={skipTripPicker} />
+      )}
     </div>
   );
 }

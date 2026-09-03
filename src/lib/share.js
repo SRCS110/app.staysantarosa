@@ -1,16 +1,17 @@
-// Turns the visitor's plan into a shareable link — still no accounts, no
-// server: the whole plan is packed into the URL itself. Sending someone
-// the link hands them the same plan, they can open it in their own
-// browser, and importing it doesn't touch what's already in theirs unless
-// they choose to.
+// Turns the visitor's trip into a shareable link — still no accounts, no
+// server: the whole itinerary is packed into the URL itself. Sending
+// someone the link hands them the same day-by-day plan, they can open it
+// in their own browser, and importing it doesn't touch what's already in
+// theirs unless they choose to.
 
 const PARAM = 'plan';
 
-// Compact, URL-safe encoding: "guideKey:name|guideKey:name|..." then
-// base64url. Simple beats clever here — plans are a handful of stops, and
-// this stays trivially readable if anyone inspects the URL.
+// Compact JSON tuples — [guideKey, name, day, order] — then base64url.
+// JSON (not a hand-rolled delimiter format) so a place name is never at
+// risk of colliding with the separator.
 export function encodePlanToParam(stops) {
-  const raw = stops.map((s) => `${s.guideKey}:${s.name}`).join('|');
+  const compact = stops.map((s) => [s.guideKey, s.name, s.day || 1, s.order ?? 0]);
+  const raw = JSON.stringify(compact);
   const b64 = btoa(unescape(encodeURIComponent(raw)));
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
@@ -22,8 +23,8 @@ export function buildShareUrl(stops) {
   return url.toString();
 }
 
-// Returns [{guideKey, name}] or null if the current URL carries no
-// (or an unreadable) shared plan.
+// Returns [{guideKey, name, day, order}] or null if the current URL
+// carries no (or an unreadable) shared plan.
 export function readSharedPlanFromUrl() {
   try {
     const url = new URL(window.location.href);
@@ -32,12 +33,19 @@ export function readSharedPlanFromUrl() {
     const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
     const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
     const decoded = decodeURIComponent(escape(atob(padded)));
-    const refs = decoded
-      .split('|')
-      .map((token) => {
-        const idx = token.indexOf(':');
-        if (idx === -1) return null;
-        return { guideKey: token.slice(0, idx), name: token.slice(idx + 1) };
+    const compact = JSON.parse(decoded);
+    if (!Array.isArray(compact)) return null;
+    const refs = compact
+      .map((entry) => {
+        if (!Array.isArray(entry) || entry.length < 2) return null;
+        const [guideKey, name, day, order] = entry;
+        if (!guideKey || !name) return null;
+        return {
+          guideKey,
+          name,
+          day: Number.isFinite(day) && day >= 1 ? day : 1,
+          order: Number.isFinite(order) ? order : 0,
+        };
       })
       .filter(Boolean);
     return refs.length ? refs : null;
