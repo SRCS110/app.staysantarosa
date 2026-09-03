@@ -1,5 +1,5 @@
-import React from 'react';
-import { XIcon, ArrowRight, MapPinIcon } from './icons.jsx';
+import React, { useState } from 'react';
+import { XIcon, ArrowRight, MapPinIcon, ShareIcon } from './icons.jsx';
 
 // Up to ~8 waypoints work reliably in Google Maps' free directions URL.
 function googleMapsUrl(stops, origin) {
@@ -13,9 +13,18 @@ function googleMapsUrl(stops, origin) {
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
-export default function PlanSheet({ stops, origin, onOpenPlace, onToggleVisited, onMove, onRemove, onClear }) {
+export default function PlanSheet({ stops, origin, onOpenPlace, onToggleVisited, onMove, onRemove, onClear, onShare }) {
   const visitedCount = stops.filter((s) => s.visited).length;
   const mapsUrl = googleMapsUrl(stops, origin);
+  const [shareState, setShareState] = useState('idle'); // idle | copied
+
+  async function handleShare() {
+    const result = await onShare();
+    if (result === 'copied') {
+      setShareState('copied');
+      window.setTimeout(() => setShareState('idle'), 2000);
+    }
+  }
 
   if (!stops.length) {
     return (
@@ -36,9 +45,16 @@ export default function PlanSheet({ stops, origin, onOpenPlace, onToggleVisited,
             {visitedCount} of {stops.length} visited
           </p>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={onClear}>
-          Clear
-        </button>
+        <div className="plan-sheet-header-actions">
+          {onShare && (
+            <button type="button" className="btn btn-ghost plan-sheet-share" onClick={handleShare}>
+              <ShareIcon size={14} /> {shareState === 'copied' ? 'Link copied' : 'Share'}
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost" onClick={onClear}>
+            Clear
+          </button>
+        </div>
       </div>
 
       <div className="plan-sheet-list">

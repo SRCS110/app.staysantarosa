@@ -27,6 +27,19 @@
 // a verified geocode; phone, hours and rating aren't published anywhere
 // found, so those fields are left blank rather than guessed.
 //
+// New fields on the 30 sourced dining places, straight from that same
+// RESTAURANTS array: rating/reviews (real Google figures), staffPick (the
+// array's own "staff" recommendation flag), dogFriendly (its "dog" flag,
+// only true for La Rosa), and hours — real per-day open/close strings,
+// parsed at render time by lib/hours.js for the "Open now" line. The 5
+// dining-only additions (e–i) carry none of these — not fabricated.
+// Attractions places carry an `indoor` flag (objective, not sourced from
+// the site) for the rainy-day nudge. Events carry a sort-only
+// dateStart/dateEnd — the site's copy only ever gave a month or date
+// range, so these are this app's own best-guess next occurrence, used
+// purely to order/hide the list, never shown as if they were the site's
+// own published dates.
+//
 // Every place's walk/drive time is measured from ONE central point — Old
 // Courthouse Square — rather than from two separate hotels. Hotel E's own
 // address (37 Old Courthouse Square) is that same point, so the numbers
@@ -82,6 +95,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 6:30 AM – 2:30 PM',
         lat: 38.437463, lng: -122.720461,
         walk: w(7),
+        rating: 4.5, reviews: 1111,
+        hours: { Monday: '6:30 AM – 2:30 PM', Tuesday: '6:30 AM – 2:30 PM', Wednesday: '6:30 AM – 2:30 PM', Thursday: '6:30 AM – 2:30 PM', Friday: '6:30 AM – 2:30 PM', Saturday: '6:30 AM – 2:30 PM', Sunday: '6:30 AM – 2:30 PM' },
       },
       {
         l: 'B',
@@ -97,6 +112,9 @@ export const GUIDES = [
         hoursNote: 'Mon–Fri 6 AM · Sat–Sun 7 AM – 3 PM',
         lat: 38.441235, lng: -122.714499,
         walk: w(2),
+        rating: 4.6, reviews: 419,
+        staffPick: true,
+        hours: { Monday: '6:00 AM – 3:00 PM', Tuesday: '6:00 AM – 3:00 PM', Wednesday: '6:00 AM – 3:00 PM', Thursday: '6:00 AM – 3:00 PM', Friday: '6:00 AM – 3:00 PM', Saturday: '7:00 AM – 3:00 PM', Sunday: '7:00 AM – 3:00 PM' },
       },
       {
         l: 'C',
@@ -112,6 +130,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 10 AM – Midnight',
         lat: 38.442085, lng: -122.716933,
         walk: w(2),
+        rating: 4.5, reviews: 1000,
+        hours: { Monday: '10:00 AM – 12:00 AM', Tuesday: '10:00 AM – 12:00 AM', Wednesday: '10:00 AM – 12:00 AM', Thursday: '10:00 AM – 12:00 AM', Friday: '10:00 AM – 12:00 AM', Saturday: '10:00 AM – 12:00 AM', Sunday: '10:00 AM – 12:00 AM' },
       },
       {
         l: 'D',
@@ -127,6 +147,8 @@ export const GUIDES = [
         hoursNote: 'Daily 11 AM · to 10 PM Fri–Sat',
         lat: 38.441582, lng: -122.71695,
         walk: w(2),
+        rating: 4.8, reviews: 194,
+        hours: { Monday: '11:00 AM – 9:00 PM', Tuesday: '11:00 AM – 9:00 PM', Wednesday: '11:00 AM – 9:00 PM', Thursday: '11:00 AM – 9:00 PM', Friday: '11:00 AM – 10:00 PM', Saturday: '11:00 AM – 10:00 PM', Sunday: '11:00 AM – 9:00 PM' },
       },
       {
         l: 'E',
@@ -142,6 +164,8 @@ export const GUIDES = [
         hoursNote: 'Closed Mon · 11:30 AM – 9/10 PM',
         lat: 38.440733, lng: -122.713543,
         walk: w(3),
+        rating: 4.6, reviews: 401,
+        hours: { Monday: 'Closed', Tuesday: '11:30 AM – 2:30 PM, 4:30 – 9:00 PM', Wednesday: '11:30 AM – 2:30 PM, 4:30 – 9:00 PM', Thursday: '11:30 AM – 2:30 PM, 4:30 – 9:00 PM', Friday: '11:30 AM – 2:30 PM, 4:30 – 10:00 PM', Saturday: '11:30 AM – 2:30 PM, 4:30 – 10:00 PM', Sunday: '11:00 AM – 9:00 PM' },
       },
       {
         l: 'F',
@@ -157,6 +181,10 @@ export const GUIDES = [
         hoursNote: 'Daily 11:30 AM – 9/10 PM',
         lat: 38.439691, lng: -122.715542,
         walk: w(2),
+        rating: 4.4, reviews: 1494,
+        staffPick: true,
+        dogFriendly: true,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 10:00 PM', Saturday: '11:30 AM – 10:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'G',
@@ -172,6 +200,8 @@ export const GUIDES = [
         hoursNote: '11:30 AM – 9 PM · 4 PM Sat–Sun',
         lat: 38.438551, lng: -122.722688,
         walk: w(9),
+        rating: 4.5, reviews: 1774,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '4:00 – 9:00 PM', Sunday: '4:00 – 9:00 PM' },
       },
       {
         l: 'H',
@@ -187,6 +217,8 @@ export const GUIDES = [
         hoursNote: 'Daily · until Midnight',
         lat: 38.442114, lng: -122.716871,
         walk: w(2),
+        rating: 4.1, reviews: 227,
+        hours: { Monday: '10:30 AM – 12:00 AM', Tuesday: '10:30 AM – 12:00 AM', Wednesday: '10:30 AM – 12:00 AM', Thursday: '10:30 AM – 12:00 AM', Friday: '10:30 AM – 12:00 AM', Saturday: '10:30 AM – 12:00 AM', Sunday: '10:30 AM – 12:00 AM' },
       },
       {
         l: 'I',
@@ -202,6 +234,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 7 AM – 3 PM',
         lat: 38.44562, lng: -122.718868,
         walk: w(8),
+        rating: 4.4, reviews: 467,
+        hours: { Monday: '7:00 AM – 3:00 PM', Tuesday: '7:00 AM – 3:00 PM', Wednesday: '7:00 AM – 3:00 PM', Thursday: '7:00 AM – 3:00 PM', Friday: '7:00 AM – 3:00 PM', Saturday: '7:00 AM – 3:00 PM', Sunday: '7:00 AM – 3:00 PM' },
       },
       {
         l: 'J',
@@ -217,6 +251,8 @@ export const GUIDES = [
         hoursNote: 'Closed Thu · 7 AM – 1:30 PM',
         lat: 38.434494, lng: -122.711791,
         walk: w(11),
+        rating: 4.6, reviews: 1139,
+        hours: { Monday: '7:00 AM – 1:30 PM', Tuesday: '7:00 AM – 1:30 PM', Wednesday: '7:00 AM – 1:30 PM', Thursday: 'Closed', Friday: '7:00 AM – 1:30 PM', Saturday: '7:00 AM – 1:30 PM', Sunday: '7:00 AM – 1:30 PM' },
       },
       {
         l: 'K',
@@ -232,6 +268,9 @@ export const GUIDES = [
         hoursNote: 'Closed Sun · 8 AM – 2:45 PM',
         lat: 38.440648, lng: -122.713438,
         walk: w(4),
+        rating: 4.7, reviews: 636,
+        staffPick: true,
+        hours: { Monday: '8:00 AM – 2:45 PM', Tuesday: '8:00 AM – 2:45 PM', Wednesday: '8:00 AM – 2:45 PM', Thursday: '8:00 AM – 2:45 PM', Friday: '8:00 AM – 2:45 PM', Saturday: '8:00 AM – 2:45 PM', Sunday: 'Closed' },
       },
       {
         l: 'L',
@@ -247,6 +286,8 @@ export const GUIDES = [
         hoursNote: '8 AM – 2 PM, 4 – 9/10 PM',
         lat: 38.437573, lng: -122.720512,
         walk: w(7),
+        rating: 4.6, reviews: 311,
+        hours: { Monday: '8:00 AM – 2:00 PM', Tuesday: '8:00 AM – 2:00 PM, 4:00 – 9:00 PM', Wednesday: '8:00 AM – 2:00 PM, 4:00 – 9:00 PM', Thursday: '8:00 AM – 2:00 PM, 4:00 – 9:00 PM', Friday: '8:00 AM – 2:00 PM, 4:00 – 10:00 PM', Saturday: '7:00 AM – 2:00 PM, 4:00 – 10:00 PM', Sunday: '7:00 AM – 2:00 PM, 4:00 – 9:00 PM' },
       },
       {
         l: 'M',
@@ -262,6 +303,9 @@ export const GUIDES = [
         hoursNote: 'Daily · 6/7 AM – 1 PM',
         lat: 38.449459, lng: -122.68917,
         walk: dr(7),
+        rating: 4.7, reviews: 919,
+        staffPick: true,
+        hours: { Monday: '6:00 AM – 1:00 PM', Tuesday: '6:00 AM – 1:00 PM', Wednesday: '6:00 AM – 1:00 PM', Thursday: '6:00 AM – 1:00 PM', Friday: '6:00 AM – 1:00 PM', Saturday: '6:00 AM – 1:00 PM', Sunday: '7:00 AM – 1:00 PM' },
       },
       {
         l: 'N',
@@ -277,6 +321,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 8 AM – 1:30 PM',
         lat: 38.4496, lng: -122.6883,
         walk: dr(7),
+        rating: 4.6, reviews: 940,
+        hours: { Monday: '8:00 AM – 1:30 PM', Tuesday: '8:00 AM – 1:30 PM', Wednesday: '8:00 AM – 1:30 PM', Thursday: '8:00 AM – 1:30 PM', Friday: '8:00 AM – 1:30 PM', Saturday: '8:00 AM – 1:30 PM', Sunday: '8:00 AM – 1:30 PM' },
       },
       {
         l: 'O',
@@ -291,6 +337,8 @@ export const GUIDES = [
         hoursNote: '11:30 AM – 9 PM · 4 PM Sat–Sun',
         lat: 38.440032, lng: -122.715095,
         walk: w(2),
+        rating: 4.6, reviews: 172,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '4:00 – 9:00 PM', Sunday: '4:00 – 9:00 PM' },
       },
       {
         l: 'P',
@@ -306,6 +354,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 11:30 AM – 9 PM',
         lat: 38.44403, lng: -122.706358,
         walk: w(12),
+        rating: 4.6, reviews: 1905,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '11:30 AM – 9:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'Q',
@@ -321,6 +371,9 @@ export const GUIDES = [
         hoursNote: '11:30 AM – 2:30 PM, 4:30 – 8/9 PM',
         lat: 38.440873, lng: -122.709048,
         walk: w(8),
+        rating: 4.7, reviews: 1035,
+        staffPick: true,
+        hours: { Monday: '11:30 AM – 2:30 PM, 4:30 – 8:00 PM', Tuesday: '11:30 AM – 2:30 PM, 4:30 – 8:00 PM', Wednesday: '11:30 AM – 2:30 PM, 4:30 – 8:00 PM', Thursday: '11:30 AM – 2:30 PM, 4:30 – 8:00 PM', Friday: '11:30 AM – 2:30 PM, 4:30 – 9:00 PM', Saturday: '4:30 – 9:00 PM', Sunday: '4:30 – 8:00 PM' },
       },
       {
         l: 'R',
@@ -336,6 +389,8 @@ export const GUIDES = [
         hoursNote: 'Closed Sun · 11 AM – 8:30 PM',
         lat: 38.440662, lng: -122.713696,
         walk: w(3),
+        rating: 4.5, reviews: 168,
+        hours: { Monday: '11:00 AM – 8:30 PM', Tuesday: '11:00 AM – 8:30 PM', Wednesday: '11:00 AM – 8:30 PM', Thursday: '11:00 AM – 8:30 PM', Friday: '11:00 AM – 1:30 AM', Saturday: '11:00 AM – 1:30 AM', Sunday: 'Closed' },
       },
       {
         l: 'S',
@@ -351,6 +406,9 @@ export const GUIDES = [
         hoursNote: 'Closed Mon · 11 AM – 2:30/9 PM',
         lat: 38.441207, lng: -122.714648,
         walk: w(2),
+        rating: 4.4, reviews: 117,
+        staffPick: true,
+        hours: { Monday: 'Closed', Tuesday: '11:00 AM – 2:30 PM, 5:00 – 9:00 PM', Wednesday: '11:00 AM – 2:30 PM, 5:00 – 9:00 PM', Thursday: '11:00 AM – 2:30 PM, 5:00 – 9:00 PM', Friday: '11:00 AM – 2:30 PM, 5:00 – 9:00 PM', Saturday: '5:00 – 9:00 PM', Sunday: '5:00 – 9:00 PM' },
       },
       {
         l: 'T',
@@ -365,6 +423,9 @@ export const GUIDES = [
         hoursNote: 'Daily · 11 AM – 9 PM',
         lat: 38.441188, lng: -122.714465,
         walk: w(2),
+        rating: 4.4, reviews: 1320,
+        staffPick: true,
+        hours: { Monday: '11:00 AM – 9:00 PM', Tuesday: '11:00 AM – 9:00 PM', Wednesday: '11:00 AM – 9:00 PM', Thursday: '11:00 AM – 9:00 PM', Friday: '11:00 AM – 9:00 PM', Saturday: '11:00 AM – 9:00 PM', Sunday: '12:00 – 9:00 PM' },
       },
       {
         l: 'U',
@@ -379,6 +440,9 @@ export const GUIDES = [
         hoursNote: '11 AM – 10 PM · later Fri–Sat',
         lat: 38.440831, lng: -122.713325,
         walk: w(4),
+        rating: 4.7, reviews: 80,
+        staffPick: true,
+        hours: { Monday: '11:00 AM – 10:00 PM', Tuesday: '11:00 AM – 10:00 PM', Wednesday: '11:00 AM – 10:00 PM', Thursday: '11:00 AM – 10:00 PM', Friday: '11:00 AM – 12:00 AM', Saturday: '10:30 AM – 12:00 AM', Sunday: '10:30 AM – 10:00 PM' },
       },
       {
         l: 'V',
@@ -394,6 +458,9 @@ export const GUIDES = [
         hoursNote: 'Closed Mon · 5 – 8:30/9 PM',
         lat: 38.437583, lng: -122.720489,
         walk: w(7),
+        rating: 4.6, reviews: 985,
+        staffPick: true,
+        hours: { Monday: 'Closed', Tuesday: '5:00 – 8:30 PM', Wednesday: '5:00 – 8:30 PM', Thursday: '5:00 – 8:30 PM', Friday: '5:00 – 9:00 PM', Saturday: '5:00 – 9:00 PM', Sunday: '5:00 – 8:00 PM' },
       },
       {
         l: 'W',
@@ -408,6 +475,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 11:30 AM – 9 PM',
         lat: 38.439892, lng: -122.715409,
         walk: w(2),
+        rating: 4.7, reviews: 345,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '11:30 AM – 9:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'X',
@@ -422,6 +491,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 11:30 AM – 9 PM',
         lat: 38.439964, lng: -122.715252,
         walk: w(2),
+        rating: 4.5, reviews: 363,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '11:30 AM – 9:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'Y',
@@ -435,6 +506,9 @@ export const GUIDES = [
         hoursNote: 'Closed Mon · 12 – 8:30/10 PM',
         lat: 38.439977, lng: -122.71522,
         walk: w(2),
+        rating: 4.6, reviews: 183,
+        staffPick: true,
+        hours: { Monday: 'Closed', Tuesday: '12:00 – 8:30 PM', Wednesday: '12:00 – 8:30 PM', Thursday: '12:00 – 8:30 PM', Friday: '12:00 – 10:00 PM', Saturday: '12:00 – 10:00 PM', Sunday: '12:00 – 8:30 PM' },
       },
       {
         l: 'Z',
@@ -450,6 +524,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 11:30 AM – 9 PM',
         lat: 38.443786, lng: -122.686112,
         walk: dr(7),
+        rating: 4.4, reviews: 907,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '11:30 AM – 9:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'a',
@@ -465,6 +541,8 @@ export const GUIDES = [
         hoursNote: 'Closed Mon–Tue · 5 – 9 PM',
         lat: 38.432998, lng: -122.714989,
         walk: w(12),
+        rating: 4.6, reviews: 995,
+        hours: { Monday: 'Closed', Tuesday: 'Closed', Wednesday: '5:00 – 9:00 PM', Thursday: '5:00 – 9:00 PM', Friday: '5:00 – 9:00 PM', Saturday: '9:30 AM – 2:00 PM, 5:00 – 9:00 PM', Sunday: '9:30 AM – 2:00 PM, 5:00 – 8:30 PM' },
       },
       {
         l: 'b',
@@ -479,6 +557,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 11:30 AM – 9 PM',
         lat: 38.454105, lng: -122.702731,
         walk: dr(6),
+        rating: 4.7, reviews: 793,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 9:00 PM', Saturday: '11:30 AM – 9:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'c',
@@ -493,6 +573,8 @@ export const GUIDES = [
         hoursNote: 'Daily · to Midnight–2 AM',
         lat: 38.441285, lng: -122.714255,
         walk: w(3),
+        rating: 4.5, reviews: 736,
+        hours: { Monday: '11:30 AM – 12:00 AM', Tuesday: '11:30 AM – 1:00 AM', Wednesday: '11:30 AM – 1:30 AM', Thursday: '11:30 AM – 1:30 AM', Friday: '11:30 AM – 12:00 AM', Saturday: '11:00 AM – 2:00 AM', Sunday: '11:00 AM – 12:00 AM' },
       },
       {
         l: 'd',
@@ -507,6 +589,8 @@ export const GUIDES = [
         hoursNote: 'Daily · 11:30 AM – 9/10 PM',
         lat: 38.43995, lng: -122.715283,
         walk: w(2),
+        rating: 4.3, reviews: 765,
+        hours: { Monday: '11:30 AM – 9:00 PM', Tuesday: '11:30 AM – 9:00 PM', Wednesday: '11:30 AM – 9:00 PM', Thursday: '11:30 AM – 9:00 PM', Friday: '11:30 AM – 10:00 PM', Saturday: '11:30 AM – 10:00 PM', Sunday: '11:30 AM – 9:00 PM' },
       },
       {
         l: 'e',
@@ -695,6 +779,7 @@ export const GUIDES = [
         hoursNote: 'Closed Mondays',
         lat: 38.44185, lng: -122.7183725,
         walk: w(3),
+        indoor: true,
       },
       {
         l: 'B',
@@ -709,6 +794,7 @@ export const GUIDES = [
         hoursNote: 'Gardens open daily; house tours seasonal',
         lat: 38.4361572, lng: -122.7117766,
         walk: w(9),
+        indoor: false,
       },
       {
         l: 'C',
@@ -723,6 +809,7 @@ export const GUIDES = [
         hoursNote: 'Closed Tuesdays',
         lat: 38.46037, lng: -122.7359139,
         walk: dr(7),
+        indoor: true,
       },
       {
         l: 'D',
@@ -736,6 +823,7 @@ export const GUIDES = [
         hoursNote: 'Event hours vary',
         lat: 38.4932027, lng: -122.7495377,
         walk: dr(14),
+        indoor: true,
       },
       {
         l: 'E',
@@ -750,6 +838,7 @@ export const GUIDES = [
         hoursNote: 'Tours by reservation',
         lat: 38.5569166, lng: -122.6955347,
         walk: dr(25),
+        indoor: false,
       },
       {
         l: 'F',
@@ -763,6 +852,7 @@ export const GUIDES = [
         hoursNote: 'Sunrise to sunset',
         lat: 38.4522438, lng: -122.6346359,
         walk: dr(15),
+        indoor: false,
       },
       {
         l: 'G',
@@ -776,6 +866,7 @@ export const GUIDES = [
         hoursNote: 'Daily, daylight hours',
         lat: 38.4500499, lng: -122.6517229,
         walk: dr(12),
+        indoor: false,
       },
       {
         l: 'H',
@@ -790,6 +881,7 @@ export const GUIDES = [
         hoursNote: 'Daily, daylight hours',
         lat: 38.5370031, lng: -123.0063252,
         walk: dr(49),
+        indoor: false,
       },
     ],
   },
@@ -812,6 +904,7 @@ export const GUIDES = [
         hoursNote: 'Mar 20 – Apr 2 · Daily 11 AM–10 PM',
         lat: 38.4408, lng: -122.7128,
         walk: w(4),
+        dateStart: '2027-03-20', dateEnd: '2027-04-02',
       },
       {
         l: 'B',
@@ -826,6 +919,7 @@ export const GUIDES = [
         hoursNote: 'Two weekends in March',
         lat: 38.6102, lng: -122.8694,
         walk: dr(42),
+        dateStart: '2027-03-06', dateEnd: '2027-03-14',
       },
       {
         l: 'C',
@@ -840,6 +934,7 @@ export const GUIDES = [
         hoursNote: 'Late August',
         lat: 38.4409, lng: -122.7161,
         walk: w(1),
+        dateStart: '2027-08-22', dateEnd: '2027-08-23',
       },
       {
         l: 'D',
@@ -854,6 +949,7 @@ export const GUIDES = [
         hoursNote: 'Aug 7–16',
         lat: 38.4321, lng: -122.6929,
         walk: dr(6),
+        dateStart: '2027-08-07', dateEnd: '2027-08-16',
       },
       {
         l: 'E',
@@ -868,6 +964,7 @@ export const GUIDES = [
         hoursNote: 'July',
         lat: 38.5471, lng: -122.8164,
         walk: dr(27),
+        dateStart: '2027-07-10', dateEnd: '2027-07-12',
       },
       {
         l: 'F',
@@ -882,6 +979,7 @@ export const GUIDES = [
         hoursNote: 'Oct 10',
         lat: 38.4321, lng: -122.6929,
         walk: dr(6),
+        dateStart: '2026-10-10', dateEnd: '2026-10-10',
       },
       {
         l: 'G',
@@ -896,6 +994,7 @@ export const GUIDES = [
         hoursNote: 'Aug 8–9',
         lat: 38.4021, lng: -122.8697,
         walk: dr(26),
+        dateStart: '2027-08-08', dateEnd: '2027-08-09',
       },
       {
         l: 'H',
@@ -910,6 +1009,7 @@ export const GUIDES = [
         hoursNote: 'Sep 20',
         lat: 38.4386, lng: -122.7203,
         walk: w(6),
+        dateStart: '2026-09-20', dateEnd: '2026-09-20',
       },
       {
         l: 'I',
@@ -924,6 +1024,7 @@ export const GUIDES = [
         hoursNote: 'June',
         lat: 38.4321, lng: -122.6929,
         walk: dr(6),
+        dateStart: '2027-06-12', dateEnd: '2027-06-14',
       },
     ],
   },

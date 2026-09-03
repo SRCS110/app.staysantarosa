@@ -61,6 +61,28 @@ body {
   border-radius: 999px;
 }
 
+.home-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.icon-ghost-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(240, 250, 225, 0.1);
+  color: rgba(240, 250, 225, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.icon-ghost-btn-active {
+  background: var(--color-accent);
+  color: #fff;
+}
+
 /* ── Home map frame (Build tab's small live map) ── */
 
 .home-map-frame {
@@ -967,6 +989,11 @@ body {
   position: relative;
   display: flex;
 }
+.bottom-nav-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+}
 .bottom-nav-badge {
   position: absolute;
   top: -5px;
@@ -983,4 +1010,447 @@ body {
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+/* ── Shared plan (incoming ?plan= link) banner — Build tab ── */
+
+.shared-plan-banner {
+  margin: 0 14px 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-2-200);
+  color: var(--color-accent-2-900);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.shared-plan-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.shared-plan-actions .btn {
+  flex: 1;
+  height: 38px;
+  font-size: 12.5px;
+}
+
+/* ── Install-to-home-screen banner — Build tab ── */
+
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+}
+.install-banner-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.install-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11.5px;
+  color: var(--color-text);
+  opacity: 0.85;
+}
+.install-banner-text strong {
+  font-size: 13px;
+  opacity: 1;
+}
+.install-banner-cta {
+  flex: none;
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.install-banner-dismiss {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  opacity: 0.45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ── Rainy-day indoor nudge — Build tab ── */
+
+.weather-nudge {
+  margin: 0 14px 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+}
+.weather-nudge-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.weather-nudge-icon {
+  flex: none;
+  color: var(--color-accent-700);
+  display: flex;
+}
+.weather-nudge-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.weather-nudge-dismiss {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.weather-nudge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.weather-nudge-chip {
+  border: 1.5px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* ── Curated itinerary picks — Build tab, horizontal cards ── */
+
+.itinerary-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 14px 16px;
+  scrollbar-width: none;
+}
+.itinerary-row::-webkit-scrollbar {
+  display: none;
+}
+.itinerary-card {
+  flex: none;
+  width: 200px;
+  background: rgba(240, 250, 225, 0.08);
+  border: 1px solid rgba(240, 250, 225, 0.14);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.itinerary-card-title {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-neutral-100);
+  margin: 0 0 4px;
+}
+.itinerary-card-blurb {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(240, 250, 225, 0.75);
+  margin: 0 0 8px;
+  flex: 1;
+}
+.itinerary-card-count {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(240, 250, 225, 0.5);
+  margin: 0 0 10px;
+}
+.itinerary-card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 9px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.itinerary-card-cta-done {
+  background: var(--color-accent-2-200);
+  color: var(--color-accent-2-900);
+  cursor: default;
+}
+
+/* ── Offline banner ── */
+
+.offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: var(--color-accent-900);
+  color: var(--color-neutral-100);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ── Hotel picker (first-run sheet) ── */
+
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(20, 18, 14, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.hotel-picker-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg);
+  border-radius: 26px 26px 0 0;
+  padding: 26px 22px max(22px, env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-lg);
+}
+.sheet-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sheet-kicker {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  margin: 0 0 4px;
+}
+.sheet-title {
+  font-size: 21px;
+  margin: 0 0 8px;
+  padding-right: 30px;
+}
+.sheet-copy {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.75;
+  margin: 0 0 18px;
+}
+.hotel-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.hotel-picker-option {
+  text-align: left;
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hotel-picker-option:hover {
+  border-color: var(--color-accent);
+}
+.hotel-picker-name {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-text);
+}
+.hotel-picker-hint {
+  font-size: 11.5px;
+  opacity: 0.6;
+}
+.hotel-picker-skip {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  opacity: 0.55;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px;
+  cursor: pointer;
+}
+
+/* ── Place detail: rating / staff-pick / open-now badges ── */
+
+.detail-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+.detail-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-accent-700);
+}
+.detail-rating-count {
+  font-weight: 500;
+  opacity: 0.55;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.badge-staff-pick {
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+}
+.badge-dog {
+  background: var(--color-accent-2-100);
+  color: var(--color-accent-2-700);
+}
+.badge-open {
+  background: var(--color-accent-2-200);
+  color: var(--color-accent-2-800);
+}
+.badge-closed {
+  background: var(--color-neutral-300);
+  color: var(--color-neutral-700);
+}
+
+/* ── Stub list: tag filter chips, open dot, rating ── */
+
+.stub-tag-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 20px 12px;
+  scrollbar-width: none;
+}
+.stub-tag-row::-webkit-scrollbar {
+  display: none;
+}
+.stub-tag-chip {
+  flex: none;
+  border: 1.5px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.stub-tag-chip-active {
+  background: var(--color-accent-2-200);
+  border-color: var(--color-accent-2-200);
+  color: var(--color-accent-2-900);
+  opacity: 1;
+}
+.stub-empty {
+  font-size: 12.5px;
+  opacity: 0.6;
+  padding: 20px;
+  text-align: center;
+}
+.stub-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stub-open-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-neutral-400);
+  flex: none;
+}
+.stub-open-dot-open {
+  background: #4a9d5f;
+}
+.stub-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  color: var(--color-accent-700);
+  font-weight: 700;
+}
+
+/* ── Plan sheet header actions (Share + Clear) ── */
+
+.plan-sheet-header-actions {
+  display: flex;
+  gap: 8px;
+}
+.plan-sheet-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }

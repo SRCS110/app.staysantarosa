@@ -17,16 +17,17 @@ export default function FullMapScreen({
   locateError,
   emphasizedName,
   onOpenPlace,
+  homeOrigin,
+  homeOriginLabel,
 }) {
   const nextStop = planPlaces.find((p) => !p.visited);
   let nextStopDistance = null;
   if (nextStop) {
-    const from = userLocation || hotels.courthouseSquare;
+    const from = userLocation || homeOrigin || hotels.courthouseSquare;
     const miles = haversineMiles(from, nextStop);
+    const fromLabel = userLocation ? ' from you' : ` from ${homeOriginLabel || 'Courthouse Square'}`;
     nextStopDistance =
-      miles <= 1
-        ? `${walkMinutes(miles)} min walk${userLocation ? ' from you' : ' from Courthouse Square'}`
-        : `${driveMinutes(miles)} min drive${userLocation ? ' from you' : ' from Courthouse Square'}`;
+      miles <= 1 ? `${walkMinutes(miles)} min walk${fromLabel}` : `${driveMinutes(miles)} min drive${fromLabel}`;
   }
 
   return (

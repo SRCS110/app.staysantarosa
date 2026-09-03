@@ -66,6 +66,93 @@ export function XIcon({ size = 18, ...rest }) {
   );
 }
 
+export function PhoneIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4.5 4h4l2 5-2.5 1.5a11 11 0 0 0 5.5 5.5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2.5 6a2 2 0 0 1 2-2z" />
+    </svg>
+  );
+}
+
+export function StarIcon({ size = 14, filled = true, ...rest }) {
+  return (
+    <svg {...base(size)} fill={filled ? 'currentColor' : 'none'} {...rest}>
+      <path d="M12 3l2.6 5.6 6 .7-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.3l6-.7z" />
+    </svg>
+  );
+}
+
+export function PawIcon({ size = 14, ...rest }) {
+  return (
+    <svg {...base(size)} fill="currentColor" stroke="none" {...rest}>
+      <circle cx="6.5" cy="9" r="1.7" />
+      <circle cx="11.2" cy="6" r="1.7" />
+      <circle cx="16.8" cy="6" r="1.7" />
+      <circle cx="21.5" cy="9" r="1.7" />
+      <path d="M14 11.2c3.6 0 6.5 2.6 6.5 5.8 0 2-1.6 3.6-3.6 3.6-1.2 0-1.9-.5-2.9-.5s-1.7.5-2.9.5c-2 0-3.6-1.6-3.6-3.6 0-3.2 2.9-5.8 6.5-5.8z" />
+    </svg>
+  );
+}
+
+export function BellIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" />
+      <path d="M9.5 18.5a2.5 2.5 0 0 0 5 0" />
+    </svg>
+  );
+}
+
+export function BellOffIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M6 9a6 6 0 0 1 10.4-4.1M18 12.8V9a6 6 0 0 0-.4-2.1M6 9c0 4-1.5 5.5-2 6.5h13" />
+      <path d="M9.5 18.5a2.5 2.5 0 0 0 5 0" />
+      <path d="M3 3l18 18" />
+    </svg>
+  );
+}
+
+export function DownloadIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M12 3v12M7 10l5 5 5-5" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+export function ShareIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <circle cx="18" cy="5" r="2.6" />
+      <circle cx="6" cy="12" r="2.6" />
+      <circle cx="18" cy="19" r="2.6" />
+      <path d="M8.3 10.7l7.4-4.4M8.3 13.3l7.4 4.4" />
+    </svg>
+  );
+}
+
+export function CloudRainIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M7 16a4.5 4.5 0 0 1 .5-9 6 6 0 0 1 11.4 2A4 4 0 0 1 18 16H7z" />
+      <path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2" />
+    </svg>
+  );
+}
+
+export function WifiOffIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M2 8.5a16 16 0 0 1 5-3.2M22 8.5a16 16 0 0 0-8.4-4.4M6.5 12.5a9.6 9.6 0 0 1 4-2.1M17.5 12.5a9.6 9.6 0 0 0-2.6-1.7" />
+      <path d="M9.5 16a5 5 0 0 1 5 0" />
+      <circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none" />
+      <path d="M3 3l18 18" />
+    </svg>
+  );
+}
+
 // ── Guide category glyphs — fork & knife (Dining), wine glass (Wine &
 // Beer), a simple mask (Attractions), calendar (Events). Kept in sync by
 // hand with the raw-SVG versions in components/MapView.jsx, which builds

@@ -1,6 +1,7 @@
 import React from 'react';
-import { ChevronLeft, ExternalLink, MapPinIcon, GuideIcon } from './icons.jsx';
+import { ChevronLeft, ExternalLink, MapPinIcon, GuideIcon, StarIcon, PawIcon, PhoneIcon } from './icons.jsx';
 import { estimateFrom } from '../lib/geo.js';
+import { openStatus } from '../lib/hours.js';
 
 const TAG_KIND = ['tag-accent', 'tag-accent-2', 'tag-neutral'];
 
@@ -18,8 +19,10 @@ export default function PlaceDetail({
   onBack,
   onToggleInPlan,
   onToggleVisited,
+  homeLabel = 'Courthouse Square',
 }) {
   const liveWalk = userLocation ? estimateFrom(userLocation, place) : null;
+  const status = place.hours ? openStatus(place.hours) : null;
 
   return (
     <div className="detail-screen">
@@ -34,6 +37,27 @@ export default function PlaceDetail({
         <p className="detail-subtitle">
           <GuideIcon guideKey={place.guideKey} size={13} /> {guideTitle}
         </p>
+
+        <div className="detail-badge-row">
+          {place.rating != null && (
+            <span className="detail-rating">
+              <StarIcon size={13} />
+              {place.rating.toFixed(1)}
+              <span className="detail-rating-count">({place.reviews.toLocaleString()})</span>
+            </span>
+          )}
+          {place.staffPick && <span className="badge badge-staff-pick">Staff pick</span>}
+          {place.dogFriendly && (
+            <span className="badge badge-dog">
+              <PawIcon size={12} /> Dog friendly
+            </span>
+          )}
+          {status && (
+            <span className={`badge ${status.open ? 'badge-open' : 'badge-closed'}`}>
+              {status.open ? `Open · closes ${status.closesAt}` : status.opensLabel || 'Closed'}
+            </span>
+          )}
+        </div>
 
         <div className="detail-photo-plate">
           <span>{place.note} photo</span>
@@ -61,7 +85,7 @@ export default function PlaceDetail({
             </div>
           )}
           <div className="walk-card">
-            <span className="walk-card-label">From Courthouse Square</span>
+            <span className="walk-card-label">From {homeLabel}</span>
             <span className="walk-card-value">{place.walk.min}</span>
             <span className="walk-card-detail">min {place.walk.mode}</span>
           </div>
@@ -98,6 +122,12 @@ export default function PlaceDetail({
           >
             <MapPinIcon size={20} />
           </a>
+
+          {place.phone && (
+            <a className="icon-circle-btn-outline" href={`tel:${place.phone.replace(/[^\d+]/g, '')}`} aria-label="Call" title="Call">
+              <PhoneIcon size={19} />
+            </a>
+          )}
         </div>
 
         {place.website && (
