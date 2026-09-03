@@ -2,10 +2,13 @@ import React from 'react';
 import { GUIDES } from '../data/guides.js';
 import { GuideIcon } from './icons.jsx';
 
-export default function GuideChips({ activeKey, onSelect }) {
+// Guide filter chips. `only` narrows the set (Browse shows dining/wine/
+// attractions — Events has its own page now); default is every guide.
+export default function GuideChips({ activeKey, onSelect, only }) {
+  const guides = only ? GUIDES.filter((g) => only.includes(g.key)) : GUIDES;
   return (
     <div className="chip-row" role="tablist" aria-label="Guides">
-      {GUIDES.map((g) => {
+      {guides.map((g) => {
         const active = g.key === activeKey;
         return (
           <button

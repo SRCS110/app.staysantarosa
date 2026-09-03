@@ -1,39 +1,36 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GUIDES_BY_KEY, HOTELS } from './data/guides.js';
 import { ITINERARIES } from './data/itineraries.js';
+import { FEATURED } from './data/featured.js';
 import { loadPlan, savePlan } from './lib/planStorage.js';
 import { loadTrip, saveTrip, hasAskedTrip, markAskedTrip } from './lib/tripStorage.js';
 import { autoArrangePlan } from './lib/itineraryPlanner.js';
 import { estimateFrom } from './lib/geo.js';
-import { sortUpcomingEvents } from './lib/events.js';
 import { loadHomeHotelKey, saveHomeHotelKey, hasAskedHomeHotel, markAskedHomeHotel } from './lib/hotelStorage.js';
 import { getWeatherNudge } from './lib/weather.js';
 import { buildShareUrl, readSharedPlanFromUrl, clearSharedPlanFromUrl } from './lib/share.js';
 import { checkNextStopClosingSoon } from './lib/notify.js';
-import PlanPanel from './components/PlanPanel.jsx';
-import GuideChips from './components/GuideChips.jsx';
-import StubList from './components/StubList.jsx';
+import BuildScreen from './components/BuildScreen.jsx';
+import BrowseScreen from './components/BrowseScreen.jsx';
+import EventsScreen from './components/EventsScreen.jsx';
+import TripScreen from './components/TripScreen.jsx';
 import PlaceDetail from './components/PlaceDetail.jsx';
 import FullMapScreen from './components/FullMapScreen.jsx';
 import PlanScreen from './components/PlanScreen.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import HotelPicker from './components/HotelPicker.jsx';
 import TripPicker from './components/TripPicker.jsx';
-import InstallPrompt from './components/InstallPrompt.jsx';
-import WeatherNudge from './components/WeatherNudge.jsx';
-import ItineraryPicks from './components/ItineraryPicks.jsx';
 import OfflineBanner from './components/OfflineBanner.jsx';
-import { BellIcon, BellOffIcon } from './components/icons.jsx';
-import { isNotifyEnabled, enableNotify, disableNotify, isNotifySupported } from './lib/notify.js';
-
-const stopKey = (s) => `${s.guideKey}:${s.name}`;
+import { isNotifyEnabled, enableNotify, disableNotify } from './lib/notify.js';
 
 export default function App() {
+  // Browse-page guide selection (dining/wine/attractions).
   const [guide, setGuideKey] = useState('dining');
-  const [activeTab, setActiveTab] = useState('build'); // 'build' | 'plan' | 'map'
+  // 'build' | 'browse' | 'events' | 'plan' | 'map' | 'trip'
+  const [activeTab, setActiveTab] = useState('build');
   const [view, setView] = useState('tabs'); // 'tabs' | 'detail'
-  const [selectedPlace, setSelectedPlace] = useState(null); // resolved place + guideKey
-  const [emphasizedName, setEmphasizedName] = useState(null);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [emphasizedName] = useState(null);
 
   const [planStops, setPlanStops] = useState(() => loadPlan());
 
@@ -42,36 +39,21 @@ export default function App() {
   const [locateError, setLocateError] = useState(null);
   const watchIdRef = useRef(null);
 
-  // Which hotel every static walk/drive time is measured from — a
-  // one-time question, answerable later too (see the Build topbar's
-  // "Change" affordance). Defaults to the shared Courthouse Square figures
-  // already baked into guides.js when skipped or unanswered.
   const [homeHotelKey, setHomeHotelKey] = useState(() => loadHomeHotelKey());
   const [showHotelPicker, setShowHotelPicker] = useState(() => !hasAskedHomeHotel());
 
-  // How many days the visitor is in town — powers the Plan tab's day
-  // columns and lib/itineraryPlanner.js's auto-arrange. Asked once, right
-  // after the hotel question (never both sheets at once), reopenable
-  // later from the Plan tab's "Trip length" button.
   const [trip, setTrip] = useState(() => loadTrip());
   const [showTripPicker, setShowTripPicker] = useState(() => hasAskedHomeHotel() && !hasAskedTrip());
 
-  // Install-to-home-screen: only ever shown once the browser has actually
-  // offered a beforeinstallprompt (Chrome/Android/Edge) — iOS Safari never
-  // fires one, so guests there simply never see the banner.
   const [installEvent, setInstallEvent] = useState(null);
   const [installDismissed, setInstallDismissed] = useState(false);
 
-  // Rainy-day nudge — a best-effort live fetch, never blocking, never
-  // shown at all if it fails or it isn't raining.
   const [weather, setWeather] = useState(null);
   const [weatherDismissed, setWeatherDismissed] = useState(false);
 
   const [notifyOn, setNotifyOn] = useState(() => isNotifyEnabled());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
 
-  // A link opened with ?plan=... offers to import that shared plan without
-  // touching whatever's already saved, unless the visitor says yes.
   const [sharedPlan, setSharedPlan] = useState(() => readSharedPlanFromUrl());
 
   useEffect(() => {
@@ -117,9 +99,6 @@ export default function App() {
     };
   }, []);
 
-  // Foreground-only reminder (see lib/notify.js for the honest limitation:
-  // no backend means no true background push) — checked each time the tab
-  // is brought back to the front.
   const nextUnvisitedRef = useRef(null);
   useEffect(() => {
     function onVisible() {
@@ -131,24 +110,43 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  const activeGuide = GUIDES_BY_KEY[guide];
   const homeHotel = homeHotelKey === 'artHouse' ? HOTELS.artHouse : null;
   const homeOrigin = homeHotel || HOTELS.courthouseSquare;
   const homeOriginLabel = homeHotel ? homeHotel.fullName : 'Old Courthouse Square';
+  const homeLabel = homeHotel ? homeHotel.name : 'Courthouse Square';
+  const tripDays = Math.max(1, trip?.days || 2);
+  const tripLabel = tripDays === 1 ? '1-day trip' : `${tripDays}-day trip`;
 
-  // The active guide's places, adjusted for display: Events gets sorted by
-  // real-world date proximity with fully-past ones dropped, and every
-  // guide's static walk/drive figure gets recomputed live from Art House
-  // when that's the chosen home hotel (the baked-in default already is
-  // Courthouse Square, so there's nothing to recompute there).
-  const displayPlaces = useMemo(() => {
-    let places = guide === 'events' ? sortUpcomingEvents(activeGuide.places) : activeGuide.places;
-    if (homeHotel) {
-      places = places.map((p) => ({ ...p, walk: estimateFrom(homeHotel, p) }));
-    }
-    return places;
-  }, [guide, activeGuide, homeHotel]);
-  const guideForList = useMemo(() => ({ ...activeGuide, places: displayPlaces }), [activeGuide, displayPlaces]);
+  const withHomeWalk = (places) =>
+    homeHotel ? places.map((p) => ({ ...p, walk: estimateFrom(homeHotel, p) })) : places;
+
+  // Browse page — the selected guide's places, walk time recomputed from
+  // the chosen home hotel when there is one.
+  const browseGuide = useMemo(() => {
+    const g = GUIDES_BY_KEY[guide];
+    return { ...g, places: withHomeWalk(g.places) };
+  }, [guide, homeHotel]);
+
+  // Build page — the attractions list, same treatment.
+  const attractionsGuide = useMemo(() => {
+    const g = GUIDES_BY_KEY.attractions;
+    return { ...g, places: withHomeWalk(g.places) };
+  }, [homeHotel]);
+
+  const eventsGuide = GUIDES_BY_KEY.events;
+
+  // Build page shortlist — real places resolved from data/featured.js.
+  const featuredPicks = useMemo(
+    () =>
+      FEATURED.map((f) => {
+        const g = GUIDES_BY_KEY[f.guideKey];
+        const place = g && g.places.find((p) => p.name === f.name);
+        if (!place) return null;
+        const walk = homeHotel ? estimateFrom(homeHotel, place) : place.walk;
+        return { ...place, guideKey: f.guideKey, why: f.why, walk };
+      }).filter(Boolean),
+    [homeHotel]
+  );
 
   const planPlaces = useMemo(
     () =>
@@ -158,17 +156,26 @@ export default function App() {
           const place = g && g.places.find((p) => p.name === ref.name);
           if (!place) return null;
           const walk = homeHotel ? estimateFrom(homeHotel, place) : place.walk;
-          return { ...place, guideKey: ref.guideKey, visited: ref.visited, day: ref.day || 1, order: ref.order ?? 0, walk };
+          return {
+            ...place,
+            guideKey: ref.guideKey,
+            visited: ref.visited,
+            day: ref.day || 1,
+            order: ref.order ?? 0,
+            time: Number.isFinite(ref.time) ? ref.time : null,
+            walk,
+          };
         })
         .filter(Boolean),
     [planStops, homeHotel]
   );
 
   useEffect(() => {
-    nextUnvisitedRef.current = planPlaces
-      .slice()
-      .sort((a, b) => a.day - b.day || a.order - b.order)
-      .find((p) => !p.visited) || null;
+    nextUnvisitedRef.current =
+      planPlaces
+        .slice()
+        .sort((a, b) => a.day - b.day || a.order - b.order)
+        .find((p) => !p.visited) || null;
   }, [planPlaces]);
 
   const indoorAttractions = useMemo(
@@ -178,7 +185,6 @@ export default function App() {
 
   function selectGuide(key) {
     setGuideKey(key);
-    setEmphasizedName(null);
   }
 
   function openPlace(place, guideKey) {
@@ -204,11 +210,6 @@ export default function App() {
     });
   }
 
-  // Additive only — used by the curated itinerary "Add all" buttons and by
-  // accepting a shared plan. Anything already in the plan is left exactly
-  // as it is, not duplicated or reordered. A shared plan's refs already
-  // carry day/order (the sharer's own arrangement) and keep them; a
-  // curated itinerary's refs don't, so those default to Day 1, appended.
   function addManyToPlan(refs) {
     setPlanStops((prev) => {
       const existing = new Set(prev.map((s) => `${s.guideKey}:${s.name}`));
@@ -225,6 +226,7 @@ export default function App() {
             visited: false,
             day: r.day,
             order: Number.isFinite(r.order) ? r.order : 0,
+            ...(Number.isFinite(r.time) ? { time: Math.round(r.time) } : {}),
           });
         } else {
           additions.push({ guideKey: r.guideKey, name: r.name, visited: false, day: 1, order: day1Count });
@@ -245,8 +247,20 @@ export default function App() {
     );
   }
 
-  // Drag-reorder in PlanSheet hands back the whole plan's new day/order
-  // assignment in one shot once a drag is released.
+  // Visitor-set clock time for one stop (minutes from midnight), or null
+  // to hand that stop back to the auto-suggested time.
+  function setStopTime(ref, minutes) {
+    setPlanStops((prev) =>
+      prev.map((s) => {
+        if (s.guideKey !== ref.guideKey || s.name !== ref.name) return s;
+        const next = { ...s };
+        if (Number.isFinite(minutes)) next.time = Math.round(minutes);
+        else delete next.time;
+        return next;
+      })
+    );
+  }
+
   function reorderPlan(flatList) {
     setPlanStops((prev) => {
       const byKey = new Map(flatList.map((f) => [`${f.guideKey}:${f.name}`, f]));
@@ -257,10 +271,6 @@ export default function App() {
     });
   }
 
-  // Re-runs the itinerary planner over the current plan from scratch —
-  // discards any manual dragging in favor of the geography/time-of-day
-  // suggestion. A deliberate action (the Plan tab's "Auto-arrange"
-  // button), never triggered automatically.
   function autoArrange() {
     setPlanStops((prev) => {
       const resolved = prev
@@ -295,7 +305,7 @@ export default function App() {
         await navigator.share({ title: 'My Stay Santa Rosa plan', url });
         return 'shared';
       } catch {
-        return null; // cancelled — not an error
+        return null;
       }
     }
     try {
@@ -399,88 +409,79 @@ export default function App() {
       {!isOnline && <OfflineBanner />}
 
       {view === 'tabs' && activeTab === 'build' && (
-        <div className="home-screen">
-          <div className="home-topbar">
-            <span className="home-kicker">Santa Rosa · Sonoma Wine Country</span>
-            <span className="home-topbar-actions">
-              {isNotifySupported() && (
-                <button
-                  type="button"
-                  className={`icon-ghost-btn${notifyOn ? ' icon-ghost-btn-active' : ''}`}
-                  onClick={toggleNotify}
-                  aria-pressed={notifyOn}
-                  aria-label={notifyOn ? 'Turn off closing-soon reminders' : 'Turn on closing-soon reminders'}
-                  title={notifyOn ? 'Closing-soon reminders on' : 'Get closing-soon reminders'}
-                >
-                  {notifyOn ? <BellIcon size={16} /> : <BellOffIcon size={16} />}
-                </button>
-              )}
-              <span className="home-free-pill">
-                {planPlaces.length ? `My Trip · ${planPlaces.length}` : 'Free · No sign-in'}
-              </span>
-            </span>
-          </div>
+        <BuildScreen
+          planCount={planPlaces.length}
+          notifyOn={notifyOn}
+          onToggleNotify={toggleNotify}
+          sharedPlan={sharedPlan}
+          onAcceptShared={acceptSharedPlan}
+          onDismissShared={dismissSharedPlan}
+          installEvent={installEvent}
+          installDismissed={installDismissed}
+          onInstall={handleInstall}
+          onDismissInstall={() => setInstallDismissed(true)}
+          weather={weather}
+          weatherDismissed={weatherDismissed}
+          indoorAttractions={indoorAttractions}
+          onDismissWeather={() => setWeatherDismissed(true)}
+          itineraries={ITINERARIES}
+          isFullyAdded={isFullyAdded}
+          onAddAll={addManyToPlan}
+          featuredPicks={featuredPicks}
+          attractionsGuide={attractionsGuide}
+          onOpenPlace={openPlace}
+          isInPlan={isInPlan}
+          onTogglePlan={toggleInPlan}
+          homeLabel={homeLabel}
+          tripLabel={tripLabel}
+          onSelectTab={setActiveTab}
+        />
+      )}
 
-          {sharedPlan && (
-            <div className="shared-plan-banner">
-              <span>
-                Someone shared a plan with you — {sharedPlan.length} {sharedPlan.length === 1 ? 'stop' : 'stops'}.
-              </span>
-              <div className="shared-plan-actions">
-                <button type="button" className="btn btn-ghost" onClick={dismissSharedPlan}>
-                  Dismiss
-                </button>
-                <button type="button" className="btn btn-primary" onClick={acceptSharedPlan}>
-                  Add to my plan
-                </button>
-              </div>
-            </div>
-          )}
+      {view === 'tabs' && activeTab === 'browse' && (
+        <BrowseScreen
+          guideKey={guide}
+          onSelectGuide={selectGuide}
+          guide={browseGuide}
+          onOpenPlace={openPlace}
+          isInPlan={isInPlan}
+          onTogglePlan={toggleInPlan}
+          homeLabel={homeLabel}
+          planCount={planPlaces.length}
+          tripLabel={tripLabel}
+          onSelectTab={setActiveTab}
+        />
+      )}
 
-          {installEvent && !installDismissed && (
-            <InstallPrompt onInstall={handleInstall} onDismiss={() => setInstallDismissed(true)} />
-          )}
+      {view === 'tabs' && activeTab === 'events' && (
+        <EventsScreen
+          guide={eventsGuide}
+          onOpenPlace={openPlace}
+          isInPlan={isInPlan}
+          onTogglePlan={toggleInPlan}
+          planCount={planPlaces.length}
+          tripLabel={tripLabel}
+          onSelectTab={setActiveTab}
+        />
+      )}
 
-          {weather?.isRainy && !weatherDismissed && (
-            <WeatherNudge
-              tempF={weather.tempF}
-              indoorPlaces={indoorAttractions}
-              onOpenPlace={openPlace}
-              onDismiss={() => setWeatherDismissed(true)}
-            />
-          )}
-
-          <div className="home-main-row">
-            <div className="home-map-frame">
-              <PlanPanel
-                places={displayPlaces}
-                guideKey={guide}
-                hotels={HOTELS}
-                userLocation={userLocation}
-                activeGuideLabel={activeGuide.title}
-                emphasizedPlaceId={emphasizedName}
-                onPinTap={(p) => openPlace(p, guide)}
-                locating={locating}
-                onLocateToggle={onLocateToggle}
-                locateError={locateError}
-              />
-            </div>
-
-            <div className="home-list-col">
-              <GuideChips activeKey={guide} onSelect={selectGuide} />
-
-              <ItineraryPicks itineraries={ITINERARIES} isFullyAdded={isFullyAdded} onAddAll={addManyToPlan} />
-
-              <StubList
-                guide={guideForList}
-                onOpenPlace={(p) => openPlace(p, guide)}
-                isInPlan={(p) => isInPlan(p, guide)}
-                onTogglePlan={(p) => toggleInPlan(p, guide)}
-                homeLabel={homeHotel ? homeHotel.name : 'Courthouse Square'}
-              />
-            </div>
-          </div>
-        </div>
+      {view === 'tabs' && activeTab === 'trip' && (
+        <TripScreen
+          hotels={HOTELS}
+          homeHotelKey={homeHotelKey}
+          trip={trip}
+          planCount={planPlaces.length}
+          onSaveHotel={(key) => {
+            const resolved = key === 'artHouse' ? 'artHouse' : null;
+            setHomeHotelKey(resolved);
+            saveHomeHotelKey(resolved);
+            markAskedHomeHotel();
+          }}
+          onSaveTrip={saveTripChoice}
+          onClearPlan={clearPlan}
+          onBack={() => setActiveTab('build')}
+          onSelectTab={setActiveTab}
+        />
       )}
 
       {view === 'tabs' && activeTab === 'plan' && (
@@ -488,6 +489,9 @@ export default function App() {
           stops={planPlaces}
           trip={trip}
           origin={userLocation || homeOrigin}
+          planCount={planPlaces.length}
+          tripLabel={tripLabel}
+          onSelectTab={setActiveTab}
           onOpenPlace={(s) => openPlace(s, s.guideKey)}
           onToggleVisited={toggleVisited}
           onRemove={removePlanStop}
@@ -495,7 +499,9 @@ export default function App() {
           onShare={handleShare}
           onReorder={reorderPlan}
           onAutoArrange={autoArrange}
-          onEditTrip={() => setShowTripPicker(true)}
+          onSetTime={setStopTime}
+          onEditTrip={() => setActiveTab('trip')}
+          onBrowse={() => setActiveTab('browse')}
         />
       )}
 
@@ -511,7 +517,8 @@ export default function App() {
           emphasizedName={emphasizedName}
           onOpenPlace={openPlace}
           homeOrigin={homeOrigin}
-          homeOriginLabel={homeHotel ? homeHotel.name : 'Courthouse Square'}
+          homeOriginLabel={homeLabel}
+          onSelectTab={setActiveTab}
         />
       )}
 
@@ -527,7 +534,7 @@ export default function App() {
           onBack={backFromDetail}
           onToggleInPlan={() => toggleInPlan(selectedPlace, selectedPlace.guideKey)}
           onToggleVisited={() => toggleVisited({ guideKey: selectedPlace.guideKey, name: selectedPlace.name })}
-          homeLabel={homeHotel ? homeHotel.name : 'Courthouse Square'}
+          homeLabel={homeLabel}
         />
       )}
 

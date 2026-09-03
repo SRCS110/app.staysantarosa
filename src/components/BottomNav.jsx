@@ -1,14 +1,16 @@
 import React from 'react';
-import { GridIcon, ChecklistIcon, MapFoldIcon } from './icons.jsx';
+import { GridIcon, ChecklistIcon, CalendarIcon } from './icons.jsx';
 
-// Floating, rounded, frosted-glass bottom nav — the app's three top-level
-// tabs. Build is the old home screen (filters + mini map + place list),
-// Plan is the visitor's self-built itinerary, Map is the full map with
-// everything (pins, plan route, live location) shown relative to you.
+// Floating, rounded, frosted-glass bottom nav — the app's three primary
+// destinations on phones. Build is the home screen (ready-made itineraries
+// + a few walkable picks + the attractions list), Plan is the visitor's
+// self-built itinerary, Events is the community-events calendar. Browse
+// (the full filterable dining/wine/attractions list) and Map are reached
+// from the top nav instead, to keep this bar to three targets.
 const TABS = [
   { key: 'build', label: 'Build', Icon: GridIcon },
   { key: 'plan', label: 'Plan', Icon: ChecklistIcon },
-  { key: 'map', label: 'Map', Icon: MapFoldIcon },
+  { key: 'events', label: 'Events', Icon: CalendarIcon },
 ];
 
 export default function BottomNav({ activeTab, onSelect, planCount }) {

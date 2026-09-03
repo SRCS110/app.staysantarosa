@@ -38,6 +38,14 @@ const SLOT_ANCHOR_MINUTES = {
 const DWELL_MINUTES = { dining: 75, wine: 90, attractions: 60, events: 90 };
 const DAY_START_MINUTES = 9 * 60; // 9:00 AM
 
+// Suggested times are shown on a 30-minute grid — nobody plans a vacation
+// day down to "10:47 AM". Derived arrivals are rounded up to the next
+// half hour (never down, so the clock still allows for real travel time).
+const TIME_STEP_MINUTES = 30;
+const LATEST_AUTO_MINUTES = 23 * 60 + 30; // 11:30 PM
+const roundUpToStep = (mins) => Math.ceil(mins / TIME_STEP_MINUTES) * TIME_STEP_MINUTES;
+const normalizeMinutes = (mins) => (((Math.round(mins) % 1440) + 1440) % 1440);
+
 export function slotFor(place) {
   if (place.guideKey === 'dining') {
     const hint = mealSlotHint(place.hours);
@@ -161,34 +169,51 @@ function nearestNeighborOrder(stops, startPoint) {
 
 // Given a day's stops already in visit order (from auto-arrange, or from
 // a manual drag), returns the same places with a `suggestedMinutes`
-// (minutes-from-midnight) and `suggestedTime` (formatted) attached.
-// Never persisted — always recomputed from whatever order is current.
+// (minutes-from-midnight, on a 30-min grid), `suggestedTime` (formatted)
+// and `timeEdited` (true when the visitor set the time by hand) attached.
+// The derived times are never persisted — always recomputed from whatever
+// order is current — but a per-stop `time` override IS persisted and wins
+// here, and also carries the clock forward for the stops after it.
 export function suggestTimesForDay(orderedStops, homeOrigin) {
   let clock = DAY_START_MINUTES;
   let cursor = homeOrigin;
   return orderedStops.map((place) => {
     const travel = cursor ? estimateFrom(cursor, place) : { min: 0 };
     let arrival = clock + travel.min;
-
-    // A real event with its own time of day (not just a bare date) is a
-    // fixed commitment — honor it over the derived sequence.
     let fixedTime = false;
-    if (place.guideKey === 'events' && place.dateStart) {
+
+    // 1. The visitor's own edited time wins over everything.
+    if (Number.isFinite(place.time)) {
+      arrival = normalizeMinutes(place.time);
+      fixedTime = true;
+    } else if (place.guideKey === 'events' && place.dateStart) {
+      // 2. A real event with its own time of day (not just a bare date)
+      //    is a fixed commitment — honor it over the derived sequence.
       const d = new Date(place.dateStart);
       if (!Number.isNaN(d.getTime()) && d.getHours() >= 6) {
         arrival = d.getHours() * 60 + d.getMinutes();
         fixedTime = true;
       }
     }
+
     if (!fixedTime) {
       const anchor = SLOT_ANCHOR_MINUTES[slotFor(place)];
       if (anchor != null && anchor > arrival) arrival = anchor;
+      arrival = roundUpToStep(arrival);
+      // Don't let an auto-derived time roll into the small hours (e.g. when
+      // it's cascading off a very late hand-set stop) — park it at 11:30 PM.
+      if (arrival > LATEST_AUTO_MINUTES) arrival = LATEST_AUTO_MINUTES;
     }
 
     const suggestedMinutes = arrival;
     clock = arrival + dwellFor(place);
     cursor = place;
-    return { ...place, suggestedMinutes, suggestedTime: formatMinutes(suggestedMinutes) };
+    return {
+      ...place,
+      suggestedMinutes,
+      suggestedTime: formatMinutes(suggestedMinutes),
+      timeEdited: Number.isFinite(place.time),
+    };
   });
 }
 

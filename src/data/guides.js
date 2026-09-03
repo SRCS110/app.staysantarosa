@@ -45,15 +45,21 @@
 // address (37 Old Courthouse Square) is that same point, so the numbers
 // below are unchanged from the old "from Hotel E" figures, just re-labeled;
 // nothing was recalculated. Times are still straight-line estimates at an
-// average walking pace, and CENTER's coordinates are approximate pending a
-// verified geocode — see the design handoff's own placeholder-data note.
+// average walking pace. CENTER (37 Old Courthouse Square) and the Art House
+// landmark (620 7th St) were corrected to verified OpenStreetMap/Nominatim
+// geocodes on 2026-09-03 — the per-place `walk` figures below were computed
+// against the earlier approximate CENTER and are off by a small constant as
+// a result; when homeHotel personalization is on they're recomputed live
+// from the corrected coordinates via lib/geo.js.
 
 export const CENTER = {
   key: 'courthouseSquare',
   name: 'Courthouse Square',
   fullName: 'Old Courthouse Square (Hotel E)',
-  lat: 38.4409,
-  lng: -122.7161,
+  // 37 Old Courthouse Square — Hotel E's own address, verified via
+  // OpenStreetMap/Nominatim geocode (was a hand-approximated point before).
+  lat: 38.43979,
+  lng: -122.71455,
 };
 
 // HOTELS still lists both properties as map landmarks — Art House is a
@@ -65,7 +71,8 @@ export const HOTELS = {
     key: 'artHouse',
     name: 'Art House',
     fullName: 'Art House Santa Rosa',
-    lat: 38.4413, lng: -122.7168,
+    // 620 7th St — verified via OpenStreetMap/Nominatim geocode.
+    lat: 38.44266, lng: -122.71443,
   },
   courthouseSquare: CENTER,
 };

@@ -103,7 +103,7 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-  background: var(--color-accent-2-800);
+  background: var(--color-neutral-200);
 }
 .map-canvas {
   width: 100%;
@@ -156,7 +156,7 @@ body {
 /* Leaflet chrome, restyled to match the brand instead of default blue/white */
 .leaflet-container {
   font-family: var(--font-body);
-  background: var(--color-accent-2-800);
+  background: var(--color-neutral-200);
 }
 .leaflet-control-zoom {
   border: none !important;
@@ -1540,6 +1540,37 @@ body {
   width: 52px;
   text-align: right;
   white-space: nowrap;
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
+  cursor: pointer;
+  border-radius: 6px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--color-accent-700) 45%, transparent);
+}
+.plan-row-time:hover {
+  background: color-mix(in srgb, var(--color-accent-700) 10%, transparent);
+}
+.plan-row-time:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.plan-row-time-edited {
+  color: var(--color-accent-2-800);
+  text-decoration-color: color-mix(in srgb, var(--color-accent-2-800) 55%, transparent);
+}
+.plan-row-time-select {
+  flex: none;
+  width: 78px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent-700);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-accent);
+  border-radius: 6px;
+  padding: 4px 2px;
 }
 
 .plan-day-cta {
@@ -1649,6 +1680,604 @@ body {
 .home-list-col {
   display: flex;
   flex-direction: column;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Restructured navigation (2026-09) — Build home slimmed (no map),
+   Browse + Events split into their own pages, top nav for the two
+   destinations the 3-slot phone bottom bar can't hold.
+   ══════════════════════════════════════════════════════════════════ */
+
+.screen {
+  min-height: 100dvh;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: max(16px, env(safe-area-inset-top)) 18px 8px;
+}
+.screen-kicker {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.screen-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.screen-topbar-actions .icon-ghost-btn {
+  background: var(--color-surface);
+  color: var(--color-accent-700);
+}
+.screen-topbar-actions .icon-ghost-btn-active {
+  background: var(--color-accent);
+  color: #fff;
+}
+.screen-pill {
+  flex: none;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent-2-900);
+  background: var(--color-accent-2-200);
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+
+.screen-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0 calc(104px + env(safe-area-inset-bottom));
+}
+.screen-body-flush {
+  padding-top: 0;
+}
+
+/* ── Top nav (Browse / Map) ── */
+
+.top-nav {
+  display: flex;
+  gap: 8px;
+  padding: 4px 20px 10px;
+}
+.top-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.top-nav-link svg {
+  flex: none;
+  opacity: 0.7;
+}
+.top-nav-link-active {
+  background: var(--color-accent-2-200);
+  border-color: var(--color-accent-2-200);
+  color: var(--color-accent-2-900);
+}
+.top-nav-link-active svg {
+  opacity: 1;
+}
+.top-nav-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* ── Build home sections ── */
+
+.home-section {
+  padding: 8px 20px 4px;
+}
+.home-section-title {
+  font-size: 18px;
+  margin: 0;
+}
+.home-section-sub {
+  margin: 3px 0 10px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+/* Itinerary cards sit on the light page now — re-skin from the old dark look. */
+.screen-build .itinerary-row {
+  padding: 2px 20px 4px;
+  margin: 0 -20px;
+}
+.screen-build .itinerary-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+}
+.screen-build .itinerary-card-title {
+  color: var(--color-text);
+}
+.screen-build .itinerary-card-blurb {
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+.screen-build .itinerary-card-count {
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+/* ── Featured shortlist (Build) ── */
+
+.featured {
+  padding: 12px 20px 4px;
+}
+.featured-head {
+  margin-bottom: 10px;
+}
+.featured-title {
+  font-size: 18px;
+  margin: 0;
+}
+.featured-sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.featured-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.featured-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+.featured-card:hover {
+  background: var(--color-neutral-200);
+}
+.featured-card-glyph {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.featured-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.featured-card-name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.featured-card-tag {
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 3px;
+}
+.featured-card-why {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.featured-card-walk {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+}
+
+/* ── Events teaser card (Build) ── */
+
+.events-teaser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 40px);
+  margin: 12px 20px 4px;
+  text-align: left;
+  background: var(--color-accent-2-900);
+  color: var(--color-neutral-100);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  font: inherit;
+}
+.events-teaser svg {
+  flex: none;
+}
+.events-teaser-glyph {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(240, 250, 225, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.events-teaser-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.events-teaser-title {
+  font-family: var(--font-heading);
+  font-size: 14.5px;
+}
+.events-teaser-sub {
+  font-size: 11.5px;
+  color: rgba(240, 250, 225, 0.7);
+}
+
+.home-browse-all {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 20px 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-accent-700);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+/* Build's attractions StubList sits directly on the page — drop the
+   sheet's dark-parent framing. */
+.screen-body .stub-sheet {
+  box-shadow: none;
+  border-radius: 0;
+  margin-top: 8px;
+  padding-top: 8px;
+  background: transparent;
+}
+.screen-body .stub-perforation {
+  display: none;
+}
+
+/* ── Browse page ── */
+
+.screen-browse .chip-row {
+  padding: 8px 20px 12px;
+}
+.screen-browse .guide-chip {
+  background: var(--color-surface);
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.screen-browse .guide-chip-active {
+  background: var(--color-accent-2-200);
+  color: var(--color-accent-2-900);
+}
+
+/* ── Events page ── */
+
+.events-body {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.events-title {
+  font-size: 22px;
+  margin: 6px 0 2px;
+}
+.events-count {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.event-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.event-row-tap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  background: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.event-row-tap:hover {
+  background: var(--color-neutral-200);
+}
+.event-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+.event-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.event-note {
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+/* ── Trip-details button (replaces the old "Free · No sign-in" pill) ── */
+
+.screen-trip-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-accent-2-900);
+  background: var(--color-accent-2-200);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.screen-trip-btn svg {
+  flex: none;
+  opacity: 0.7;
+}
+.screen-trip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+.screen-pill-static {
+  background: var(--color-surface);
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+/* ── Trip details page ── */
+
+.trip-body {
+  padding-left: 20px;
+  padding-right: 20px;
+  gap: 0;
+}
+.trip-page-title {
+  font-size: 24px;
+  margin: 6px 0 4px;
+}
+.trip-page-sub {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+.trip-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.trip-card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  margin: 0;
+}
+.trip-card-title svg {
+  color: var(--color-accent-700);
+}
+.trip-card-note {
+  margin: 4px 0 14px;
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.trip-hotel-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trip-hotel-option {
+  text-align: left;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.trip-hotel-option-active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-100);
+}
+.trip-hotel-name {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--color-text);
+}
+.trip-hotel-hint {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.trip-body .trip-picker-days {
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+.trip-save-btn {
+  height: 48px;
+  margin-top: 4px;
+}
+.trip-clear-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: var(--color-accent-700);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 14px 6px 4px;
+  cursor: pointer;
+}
+
+/* ── Plan tab empty state — skeleton preview instead of a blank page ── */
+
+.plan-empty-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+.plan-empty-cta .btn {
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.plan-day-skeleton {
+  opacity: 0.85;
+}
+.plan-day-skeleton .plan-day-list {
+  border: 1.5px dashed var(--color-divider);
+  padding: 10px;
+}
+.plan-row-ghost {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 12px 12px;
+}
+.plan-row-ghost-time {
+  flex: none;
+  width: 34px;
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.plan-row-ghost-dot {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+.plan-row-ghost-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plan-row-ghost-line {
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.plan-row-ghost-line-short {
+  width: 45%;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+@media (min-width: 900px) {
+  .top-nav {
+    padding-left: 0;
+  }
+  .featured-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .events-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .trip-body {
+    max-width: 560px;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════

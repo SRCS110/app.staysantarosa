@@ -6,11 +6,17 @@
 
 const PARAM = 'plan';
 
-// Compact JSON tuples — [guideKey, name, day, order] — then base64url.
-// JSON (not a hand-rolled delimiter format) so a place name is never at
-// risk of colliding with the separator.
+// Compact JSON tuples — [guideKey, name, day, order, time?] — then
+// base64url. JSON (not a hand-rolled delimiter format) so a place name is
+// never at risk of colliding with the separator. `time` (minutes from
+// midnight, when the sharer edited that stop's clock time) is only
+// appended when set, so older 4-element links still read fine.
 export function encodePlanToParam(stops) {
-  const compact = stops.map((s) => [s.guideKey, s.name, s.day || 1, s.order ?? 0]);
+  const compact = stops.map((s) => {
+    const tuple = [s.guideKey, s.name, s.day || 1, s.order ?? 0];
+    if (Number.isFinite(s.time)) tuple.push(Math.round(s.time));
+    return tuple;
+  });
   const raw = JSON.stringify(compact);
   const b64 = btoa(unescape(encodeURIComponent(raw)));
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -38,13 +44,14 @@ export function readSharedPlanFromUrl() {
     const refs = compact
       .map((entry) => {
         if (!Array.isArray(entry) || entry.length < 2) return null;
-        const [guideKey, name, day, order] = entry;
+        const [guideKey, name, day, order, time] = entry;
         if (!guideKey || !name) return null;
         return {
           guideKey,
           name,
           day: Number.isFinite(day) && day >= 1 ? day : 1,
           order: Number.isFinite(order) ? order : 0,
+          ...(Number.isFinite(time) ? { time: Math.round(time) } : {}),
         };
       })
       .filter(Boolean);

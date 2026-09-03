@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import MapView from './MapView.jsx';
+import TopNav from './TopNav.jsx';
 import { haversineMiles, walkMinutes, driveMinutes } from '../lib/geo.js';
 
 // The Map tab — your plan, and only your plan, on the real map. No guide
@@ -22,6 +23,7 @@ export default function FullMapScreen({
   onOpenPlace,
   homeOrigin,
   homeOriginLabel,
+  onSelectTab,
 }) {
   const tripDays = Math.max(1, trip?.days || 1);
   const [selectedDay, setSelectedDay] = useState(0); // 0 = All
@@ -53,6 +55,8 @@ export default function FullMapScreen({
           {planPlaces.length ? `${planPlaces.length} in plan` : 'Your plan'}
         </span>
       </div>
+
+      <TopNav activeTab="map" onSelect={onSelectTab} planCount={planPlaces.length} />
 
       {planPlaces.length > 0 && tripDays > 1 && (
         <div className="full-map-day-chips">

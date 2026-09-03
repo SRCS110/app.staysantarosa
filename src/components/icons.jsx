@@ -227,6 +227,24 @@ export function GripIcon({ size = 16, ...rest }) {
   );
 }
 
+export function GearIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" />
+    </svg>
+  );
+}
+
+export function BedIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M3 7v11M3 12h18v6M21 18v-3a3 3 0 0 0-3-3H8V8a1 1 0 0 1 1-1h9" />
+      <circle cx="6.5" cy="9.5" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function WandIcon({ size = 16, ...rest }) {
   return (
     <svg {...base(size)} {...rest}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { Compass } from './icons.jsx';
+import { fetchWalkingRoute } from '../lib/routing.js';
 
 // Kept in sync by hand with the Organic tokens (organic.css) — Leaflet's
 // path/marker styling takes real color values, not var(--*) lookups.
@@ -105,6 +106,8 @@ export default function MapView({
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const layerRef = useRef(null);
+  const routeLayerRef = useRef(null);
+  const routeSigRef = useRef(null);
   const userMarkerRef = useRef(null);
   const hasCenteredOnUser = useRef(false);
   const lastFitKey = useRef(null);
@@ -116,16 +119,28 @@ export default function MapView({
       zoomControl: false,
       attributionControl: true,
       tap: true,
-    }).setView([38.4409, -122.7161], 15);
+    }).setView([38.43979, -122.71455], 15);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
+    // Esri "Light Gray Canvas" — a deliberately muted, label-light
+    // basemap so the place pins carry the visual weight, not the street
+    // grid. Keyless (no API key, account, or usage token — CARTO Voyager
+    // and the default OSM style both proved too busy / key-gated). Two
+    // layers: the grey base, then a sparse street-name reference on top.
+    const esriAttr =
+      'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, attribution: esriAttr }
+    ).addTo(map);
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, pane: 'overlayPane', opacity: 0.9 }
+    ).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // Route line sits under the markers; its own layer so an async routed
+    // geometry can swap in without disturbing the pins.
+    routeLayerRef.current = L.layerGroup().addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -133,6 +148,7 @@ export default function MapView({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      routeLayerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -180,9 +196,8 @@ export default function MapView({
     }
 
     // Plan stops always render on top, as numbered label cards (each in its
-    // own guide's glyph), with a route line linking them in order.
+    // own guide's glyph).
     if (planPlaces.length) {
-      const line = [];
       planPlaces.forEach((p, i) => {
         const glyph = categoryGlyph(p.guideKey, 12);
         const color = dayColor(p.day);
@@ -192,13 +207,69 @@ export default function MapView({
         marker.on('click', () => onPinTap && onPinTap(p, p.guideKey));
         layer.addLayer(marker);
         bounds.push([p.lat, p.lng]);
-        line.push([p.lat, p.lng]);
       });
-      if (line.length > 1) {
-        layer.addLayer(
-          L.polyline(line, { color: COLORS.accent, weight: 3, opacity: 0.8, dashArray: '1 9', lineCap: 'round' })
+    }
+
+    // Route line, drawn per day and following real walking paths. Grouped
+    // by day so a multi-day "All" view reads as separate colored routes,
+    // not one line zig-zagging between days. A straight dashed line shows
+    // immediately; if the keyless OSRM lookup (lib/routing.js) resolves,
+    // it's replaced in place with the sidewalk-following geometry.
+    const routeLayer = routeLayerRef.current;
+    if (routeLayer) routeLayer.clearLayers();
+    if (routeLayer && planPlaces.length > 1) {
+      const byDay = new Map();
+      planPlaces.forEach((p) => {
+        const d = p.day || 1;
+        if (!byDay.has(d)) byDay.set(d, []);
+        byDay.get(d).push(p);
+      });
+
+      const sig = JSON.stringify(
+        [...byDay.entries()].map(([d, ps]) => [d, ps.map((p) => [p.lat, p.lng])])
+      );
+      routeSigRef.current = sig;
+
+      byDay.forEach((ps, d) => {
+        if (ps.length < 2) return;
+        routeLayer.addLayer(
+          L.polyline(ps.map((p) => [p.lat, p.lng]), {
+            color: dayColor(d),
+            weight: 3,
+            opacity: 0.45,
+            dashArray: '1 9',
+            lineCap: 'round',
+          })
         );
-      }
+      });
+
+      Promise.all(
+        [...byDay.entries()].map(async ([d, ps]) => ({
+          d,
+          geom: ps.length >= 2 ? await fetchWalkingRoute(ps) : null,
+        }))
+      ).then((results) => {
+        if (routeSigRef.current !== sig || !routeLayerRef.current) return; // stale redraw
+        const rl = routeLayerRef.current;
+        rl.clearLayers();
+        results.forEach(({ d, geom }) => {
+          const ps = byDay.get(d);
+          if (!ps || ps.length < 2) return;
+          const routed = Array.isArray(geom) && geom.length > 1;
+          rl.addLayer(
+            L.polyline(routed ? geom : ps.map((p) => [p.lat, p.lng]), {
+              color: dayColor(d),
+              weight: routed ? 4 : 3,
+              opacity: routed ? 0.85 : 0.45,
+              dashArray: routed ? null : '1 9',
+              lineCap: 'round',
+              lineJoin: 'round',
+            })
+          );
+        });
+      });
+    } else {
+      routeSigRef.current = null;
     }
 
     if (bounds.length && fitKey !== lastFitKey.current) {

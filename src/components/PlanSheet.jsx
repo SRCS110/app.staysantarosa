@@ -1,7 +1,14 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { XIcon, ArrowRight, MapPinIcon, ShareIcon, GripIcon, WandIcon, PencilIcon, GuideIcon } from './icons.jsx';
 import { suggestTimesForDay } from '../lib/itineraryPlanner.js';
+import { formatMinutes } from '../lib/hours.js';
 import { formatDayDate, dateForDay } from '../lib/tripStorage.js';
+
+// 30-minute clock options for the per-stop time picker, 6:00 AM – 11:30 PM.
+const TIME_OPTIONS = [];
+for (let m = 6 * 60; m <= 23 * 60 + 30; m += 30) {
+  TIME_OPTIONS.push({ value: m, label: formatMinutes(m) });
+}
 
 // Up to ~8 waypoints work reliably in Google Maps' free directions URL.
 function googleMapsUrl(stops, origin) {
@@ -44,10 +51,13 @@ export default function PlanSheet({
   onShare,
   onReorder,
   onAutoArrange,
+  onSetTime,
   onEditTrip,
+  onBrowse,
 }) {
   const visitedCount = stops.filter((s) => s.visited).length;
   const [shareState, setShareState] = useState('idle');
+  const [editingTimeKey, setEditingTimeKey] = useState(null);
 
   const tripDays = Math.max(1, trip?.days || 1);
   const baseBuckets = useMemo(() => buildDayBuckets(stops, tripDays), [stops, tripDays]);
@@ -159,9 +169,57 @@ export default function PlanSheet({
   if (!stops.length) {
     return (
       <div className="plan-sheet">
+        <div className="plan-sheet-header">
+          <div>
+            <h2 className="plan-sheet-title">My Trip</h2>
+            <p className="plan-sheet-count">{tripDays === 1 ? '1 day' : `${tripDays} days`} · nothing added yet</p>
+          </div>
+        </div>
+
         <p className="plan-sheet-empty">
-          Your plan is empty. Open any place and tap <strong>Add to plan</strong> to start building your trip.
+          This is where your itinerary builds. Add places from Browse or Events and they'll drop into these
+          day columns with suggested times you can drag around.
         </p>
+
+        <div className="plan-days">
+          {Array.from({ length: tripDays }, (_, dayIdx) => {
+            const dateLabel = formatDayDate(dateForDay(trip, dayIdx + 1));
+            return (
+              <div className="plan-day plan-day-skeleton" key={dayIdx}>
+                <div className="plan-day-header">
+                  <span className="plan-day-title">Day {dayIdx + 1}</span>
+                  {dateLabel && <span className="plan-day-date">{dateLabel}</span>}
+                  <span className="plan-day-count">nothing yet</span>
+                </div>
+                <div className="plan-day-list">
+                  {Array.from({ length: dayIdx === 0 ? 3 : 2 }, (_, i) => (
+                    <div className="plan-row-ghost" key={i} aria-hidden="true">
+                      <span className="plan-row-ghost-time" />
+                      <span className="plan-row-ghost-dot" />
+                      <span className="plan-row-ghost-lines">
+                        <span className="plan-row-ghost-line" />
+                        <span className="plan-row-ghost-line plan-row-ghost-line-short" />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="plan-empty-cta">
+          {onBrowse && (
+            <button type="button" className="btn btn-primary btn-block" onClick={onBrowse}>
+              Browse places to add
+            </button>
+          )}
+          {onEditTrip && (
+            <button type="button" className="btn btn-ghost btn-block" onClick={onEditTrip}>
+              <PencilIcon size={14} /> Edit trip details
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -192,7 +250,7 @@ export default function PlanSheet({
           <WandIcon size={14} /> Auto-arrange
         </button>
         <button type="button" className="btn btn-ghost plan-toolbar-btn" onClick={onEditTrip}>
-          <PencilIcon size={14} /> Trip length
+          <PencilIcon size={14} /> Trip details
         </button>
       </div>
 
@@ -235,7 +293,38 @@ export default function PlanSheet({
                     >
                       <GripIcon size={15} />
                     </button>
-                    <span className="plan-row-time">{s.suggestedTime}</span>
+                    {editingTimeKey === keyOf(s) ? (
+                      <select
+                        className="plan-row-time-select"
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
+                        autoFocus
+                        value={Number.isFinite(s.time) ? s.time : ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          onSetTime(s, v === '' ? null : Number(v));
+                          setEditingTimeKey(null);
+                        }}
+                        onBlur={() => setEditingTimeKey(null)}
+                        aria-label={`Set a time for ${s.name}`}
+                      >
+                        <option value="">Auto</option>
+                        {TIME_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`plan-row-time${s.timeEdited ? ' plan-row-time-edited' : ''}`}
+                        onClick={() => onSetTime && setEditingTimeKey(keyOf(s))}
+                        aria-label={`Change time for ${s.name}, currently ${s.suggestedTime}`}
+                        title="Change time"
+                      >
+                        {s.suggestedTime}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="plan-row-check"
