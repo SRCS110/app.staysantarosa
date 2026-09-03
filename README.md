@@ -17,7 +17,7 @@ A rounded, frosted-glass nav floats over the bottom of every screen with three t
 
 1. **Build** — the old home screen: a small live map (real OpenStreetMap/CARTO tiles via Leaflet, not a drawing) at the top, the four guide filter chips, and the place list below. Tap **+** on any row to add that place to your plan without leaving the list.
 2. **Plan** — your self-built itinerary on its own page, no map underneath. Numbered stops, tap a stop's number to mark it visited, reorder with ↑/↓, remove or clear stops, and hand the whole route to Google Maps as a multi-stop walking route (`Open in Google Maps`, up to ~8 waypoints). The bottom nav's Plan tab shows a live stop count badge.
-3. **Map** — everything shown relative to you, filling the whole viewport: topbar + guide chips at the top, the map taking every remaining pixel below them (standard Leaflet touch/wheel handling — any touch pans it, pinch or scroll zooms it, no gesture gating). Your plan still renders on it as numbered stops with a route line and a **Next stop** banner (distance from your live location if it's on, otherwise from Courthouse Square). The **Pins / Rings** toggle switches to direction 1c's walking-time rings — 5/12/25-minute dashed circles from Courthouse Square or your own location, with the origin switcher and a live per-ring place count docked below the map (Rings mode only, its own internal scroll if it runs long).
+3. **Map** — your plan, and only your plan, on the real map, filling the whole viewport: a topbar (with a live stop count) at the top, the map taking every remaining pixel below it (standard Leaflet touch/wheel handling — any touch pans it, pinch or scroll zooms it, no gesture gating). No guide browsing here — that's what Build's list and mini map are for — so each stop renders as a labeled card (number + category glyph + the place's own name) rather than a bare pin, linked by a route line, plus a **Next stop** banner (distance from your live location if it's on, otherwise from Courthouse Square). An empty plan shows a hint to add places from Build instead of a blank map.
 
 Tapping a place (from Build's list or Map's pins) opens **Place detail** as a full-screen overlay on top of the current tab — photo plate, tags, description, walking/driving time from Courthouse Square (and a third live card, "From you", once location is on), an **Add to plan** button, a **Mark as visited** toggle once it's in your plan, and an outlined pin button that opens it in Google/Apple Maps for turn-by-turn directions. Its back arrow returns to whichever tab you opened it from; the bottom nav hides while it's open.
 
@@ -44,13 +44,13 @@ Before shipping: get a verified coordinate for Courthouse Square/Art House (curr
 - `src/lib/geo.js` — haversine distance, walk/drive time estimates, walking-ring radii.
 - `src/lib/planStorage.js` — localStorage read/write for the plan.
 - `src/components/BottomNav.jsx` — the floating Build/Plan/Map tab bar.
-- `src/components/MapView.jsx` — the real Leaflet map (pins mode + rings mode), used both small (Build tab) and full-bleed (Map tab).
+- `src/components/MapView.jsx` — the real Leaflet map, used both small (Build tab, browsing the active guide's pins) and full-bleed (Map tab, plan stops only, rendered as labeled cards).
 - `src/components/PlanPanel.jsx` — Build tab's mini map wrapper.
 - `src/components/GuideChips.jsx` / `StubList.jsx` — the four filter chips and the perforated "ticket stub" place list (with the plan +/✓ toggle).
 - `src/components/PlaceDetail.jsx` — the place-detail overlay opened from Build or Map.
-- `src/components/FullMapScreen.jsx` — the Map tab: map + Pins/Rings toggle + next-stop banner, ring-origin switcher in normal flow underneath (Rings mode only).
+- `src/components/FullMapScreen.jsx` — the Map tab: full-bleed map of just your plan + next-stop banner + empty-plan hint.
 - `src/components/PlanScreen.jsx` — the Plan tab's page frame around `PlanSheet.jsx`.
-- `src/components/PlanSheet.jsx` / `RingOriginSheet.jsx` — the plan list (Plan tab) and the ring-origin switcher (Map tab, Rings mode).
+- `src/components/PlanSheet.jsx` — the plan list (Plan tab).
 - `src/styles/organic.css` — the licensed Organic token sheet, unmodified except the client's five background-token overrides (documented inline).
 - `src/styles/app.css` — this app's component styles, built only from `var(--*)` tokens, plus the Leaflet chrome overrides.
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { Compass } from './icons.jsx';
-import { RING_MINUTES, ringRadiusMeters } from '../lib/geo.js';
 
 // Kept in sync by hand with the Organic tokens (organic.css) — Leaflet's
 // path/marker styling takes real color values, not var(--*) lookups.
@@ -54,20 +53,26 @@ function userIcon() {
   });
 }
 
-function pinIcon(glyph, { planNumber } = {}) {
-  const content = planNumber != null ? planNumber : glyph;
-  const cls = planNumber != null ? 'map-pin map-pin-plan' : 'map-pin';
+function pinIcon(glyph) {
   return L.divIcon({
-    html: `<div class="${cls}">${content}</div>`,
+    html: `<div class="map-pin">${glyph}</div>`,
     className: 'map-marker-wrap',
     iconSize: [26, 26],
     iconAnchor: [13, 13],
   });
 }
 
-function ringLabelIcon(glyph, name) {
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// A plan stop's marker: a small labeled card (number + category glyph + the
+// place's own name) rather than a bare numbered dot — readable straight off
+// the map without a tap, and each stop keeps its own guide's glyph even when
+// the plan mixes dining/wine/attractions/events stops together.
+function planCardIcon(glyph, name, number, emphasized) {
   return L.divIcon({
-    html: `<div class="map-ring-pill"><span class="map-ring-pill-letter">${glyph}</span>${name}</div>`,
+    html: `<div class="map-plan-card${emphasized ? ' map-plan-card-emphasized' : ''}"><span class="map-plan-card-badge">${number}</span><span class="map-plan-card-glyph">${glyph}</span><span class="map-plan-card-name">${escapeHtml(name)}</span></div>`,
     className: 'map-marker-wrap',
     iconAnchor: [-6, 12],
   });
@@ -79,8 +84,6 @@ export default function MapView({
   planPlaces = [],
   hotels,
   userLocation,
-  mode = 'pins',
-  ringOrigin,
   emphasizedName,
   onPinTap,
   fullscreen = false,
@@ -150,53 +153,10 @@ export default function MapView({
       bounds.push([h.lat, h.lng]);
     });
 
-    if (mode === 'rings' && ringOrigin) {
-      RING_MINUTES.forEach((min, i) => {
-        const radius = ringRadiusMeters(min);
-        const circle = L.circle([ringOrigin.lat, ringOrigin.lng], {
-          radius,
-          color: COLORS.sage,
-          weight: 1.5,
-          opacity: 0.55,
-          fill: false,
-          dashArray: '2 7',
-        });
-        layer.addLayer(circle);
-        const b = circle.getBounds();
-        bounds.push([b.getNorth(), b.getEast()], [b.getSouth(), b.getWest()]);
-
-        const labelPoint = L.latLng(ringOrigin.lat + radius / 111320, ringOrigin.lng);
-        const label = L.marker(labelPoint, {
-          icon: L.divIcon({
-            html: `<div class="map-ring-time">${min} min</div>`,
-            className: 'map-marker-wrap',
-            iconAnchor: [-8, 8],
-          }),
-          keyboard: false,
-          interactive: false,
-        });
-        layer.addLayer(label);
-      });
-
-      const originMarker = L.marker([ringOrigin.lat, ringOrigin.lng], {
-        icon: L.divIcon({
-          html: '<div class="map-ring-origin"></div>',
-          className: 'map-marker-wrap',
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
-        }),
-        keyboard: false,
-      });
-      layer.addLayer(originMarker);
-
-      const ringGlyph = categoryGlyph(guideKey, 10);
-      places.forEach((p) => {
-        const marker = L.marker([p.lat, p.lng], { icon: ringLabelIcon(ringGlyph, p.name) });
-        marker.on('click', () => onPinTap && onPinTap(p, guideKey));
-        layer.addLayer(marker);
-        bounds.push([p.lat, p.lng]);
-      });
-    } else {
+    // Browsing pins — the small Build-tab map passes its active guide's
+    // places here; the full Map tab never does (it only ever shows the
+    // plan), so this whole block is a no-op there.
+    if (places.length) {
       const pinGlyph = categoryGlyph(guideKey, 13);
       places
         .filter((p) => !planIds.has(`${guideKey}:${p.name}`))
@@ -209,11 +169,15 @@ export default function MapView({
         });
     }
 
-    // Plan stops always render on top, numbered in order, with a route line.
+    // Plan stops always render on top, as numbered label cards (each in its
+    // own guide's glyph), with a route line linking them in order.
     if (planPlaces.length) {
       const line = [];
       planPlaces.forEach((p, i) => {
-        const marker = L.marker([p.lat, p.lng], { icon: pinIcon(null, { planNumber: i + 1 }) });
+        const glyph = categoryGlyph(p.guideKey, 12);
+        const marker = L.marker([p.lat, p.lng], {
+          icon: planCardIcon(glyph, p.name, i + 1, p.name === emphasizedName),
+        });
         marker.on('click', () => onPinTap && onPinTap(p, p.guideKey));
         layer.addLayer(marker);
         bounds.push([p.lat, p.lng]);
@@ -230,7 +194,7 @@ export default function MapView({
       lastFitKey.current = fitKey;
       map.fitBounds(bounds, { padding: [28, 28], maxZoom: 17 });
     }
-  }, [places, guideKey, planPlaces, hotels, mode, ringOrigin, emphasizedName, onPinTap, fitKey]);
+  }, [places, guideKey, planPlaces, hotels, emphasizedName, onPinTap, fitKey]);
 
   // User location marker — kept outside the redraw layer so it doesn't
   // flicker or force a re-fit every time a GPS fix comes in.

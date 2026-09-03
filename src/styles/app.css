@@ -197,52 +197,49 @@ body {
   box-shadow: 0 0 0 2px var(--color-neutral-100), var(--shadow-sm);
 }
 
-.map-ring-pill {
+/* A plan stop's marker on the Map tab — a labeled card (number badge +
+   category glyph + the place's own name) instead of a bare pin, so the
+   plan reads straight off the map without tapping each stop. */
+.map-plan-card {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: var(--color-neutral-100);
   color: var(--color-accent-2-900);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 11px;
-  padding: 5px 10px 5px 5px;
+  font-size: 12px;
+  padding: 5px 12px 5px 5px;
   border-radius: 999px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   white-space: nowrap;
   cursor: pointer;
 }
-.map-ring-pill-letter {
+.map-plan-card-badge {
+  flex: none;
   width: 18px;
   height: 18px;
   border-radius: 50%;
   background: var(--color-accent);
   color: #fff;
-  font-size: 9px;
+  font-family: var(--font-heading);
+  font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.map-plan-card-glyph {
   flex: none;
+  display: flex;
+  color: var(--color-accent-700);
 }
-
-.map-ring-time {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--color-accent-2-900);
-  background: color-mix(in srgb, var(--color-neutral-100) 88%, transparent);
-  padding: 2px 6px;
-  border-radius: 999px;
-  white-space: nowrap;
+.map-plan-card-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.map-ring-origin {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  border: 2px solid var(--color-neutral-100);
-  box-shadow: var(--shadow-sm);
+.map-plan-card-emphasized {
+  animation: pin-pulse 1.3s ease-in-out 2;
 }
 
 .map-user-dot {
@@ -691,36 +688,14 @@ body {
   justify-content: space-between;
   padding: max(14px, env(safe-area-inset-top)) 16px 8px;
 }
-
-.full-map-mode-toggle {
-  display: flex;
-  background: rgba(240, 250, 225, 0.1);
-  border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
-}
-.mode-toggle-btn {
-  border: none;
-  background: transparent;
-  color: rgba(240, 250, 225, 0.75);
+.full-map-plan-count {
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 12px;
+  color: rgba(240, 250, 225, 0.85);
+  background: rgba(240, 250, 225, 0.1);
   padding: 7px 14px;
   border-radius: 999px;
-  cursor: pointer;
-}
-.mode-toggle-btn-active {
-  background: var(--color-accent-2-200);
-  color: var(--color-accent-2-900);
-}
-
-.full-map-chips {
-  padding-bottom: 2px;
-}
-.full-map-chips .chip-row {
-  padding-top: 0;
-  padding-bottom: 10px;
 }
 
 .full-map-canvas-wrap {
@@ -766,23 +741,22 @@ body {
   opacity: 0.6;
 }
 
-/* ── Plan section (plan list / ring origin switcher) — sits in normal
-   page flow right under the map, not a floating dock. The page itself
-   scrolls to reveal it (see .full-map-screen), so nothing here needs its
-   own scroll container or a collapse toggle. ── */
-
-.map-plan-section {
-  background: var(--color-bg);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.2);
-  flex: none;
-  max-height: 40vh;
-  overflow-y: auto;
-  padding-top: 14px;
+.map-empty-plan {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 400;
+  background: color-mix(in srgb, var(--color-accent-900) 85%, transparent);
+  color: var(--color-neutral-100);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
 }
 
-.plan-sheet,
-.ring-sheet {
+.plan-sheet {
   padding: 0 20px 20px;
 }
 /* On the standalone Plan tab (not docked under the map), the section needs
@@ -915,64 +889,6 @@ body {
   height: 46px;
   font-size: 13.5px;
   text-decoration: none;
-}
-
-.ring-sheet-caption {
-  margin: 4px 0 8px;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.55;
-}
-.ring-origin-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.ring-origin-btn {
-  flex: 1;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 12.5px;
-  padding: 9px 6px;
-  border-radius: 999px;
-  border: 1.5px solid var(--color-divider);
-  background: transparent;
-  color: var(--color-text);
-  cursor: pointer;
-}
-.ring-origin-btn-active {
-  background: var(--color-accent-2-200);
-  border-color: var(--color-accent-2-200);
-  color: var(--color-accent-2-900);
-}
-.ring-origin-btn-disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.ring-counts {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.ring-count {
-  flex: 1;
-  text-align: center;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 12px 4px;
-}
-.ring-count-value {
-  display: block;
-  font-family: var(--font-heading);
-  font-size: 22px;
-}
-.ring-count-label {
-  display: block;
-  font-size: 10px;
-  opacity: 0.6;
-  margin-top: 2px;
 }
 
 /* ── Plan tab (standalone — no map underneath) ── */

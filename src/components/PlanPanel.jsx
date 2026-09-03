@@ -24,7 +24,6 @@ export default function PlanPanel({
       planPlaces={[]}
       hotels={hotels}
       userLocation={userLocation}
-      mode="pins"
       emphasizedName={emphasizedPlaceId}
       onPinTap={onPinTap}
       fitKey={`home:${activeGuideLabel}`}

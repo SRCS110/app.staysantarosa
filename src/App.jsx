@@ -17,8 +17,6 @@ export default function App() {
   const [emphasizedName, setEmphasizedName] = useState(null);
 
   const [planStops, setPlanStops] = useState(() => loadPlan());
-  const [mapMode, setMapMode] = useState('pins');
-  const [ringOriginKey, setRingOriginKey] = useState('courthouseSquare');
 
   const [userLocation, setUserLocation] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -182,9 +180,6 @@ export default function App() {
 
       {view === 'tabs' && activeTab === 'map' && (
         <FullMapScreen
-          activeGuideKey={guide}
-          onSelectGuide={selectGuide}
-          places={activeGuide.places}
           planPlaces={planPlaces}
           hotels={HOTELS}
           userLocation={userLocation}
@@ -193,10 +188,6 @@ export default function App() {
           locateError={locateError}
           emphasizedName={emphasizedName}
           onOpenPlace={openPlace}
-          mapMode={mapMode}
-          onSetMapMode={setMapMode}
-          ringOriginKey={ringOriginKey}
-          onSetRingOriginKey={setRingOriginKey}
         />
       )}
 
