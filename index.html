@@ -9,9 +9,26 @@
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Stay Santa Rosa — City Guide</title>
+
+    <link rel="stylesheet" href="/vendor/leaflet.css" />
+    <link rel="stylesheet" href="/src/styles/organic.css" />
+    <link rel="stylesheet" href="/src/styles/app.css" />
+
+    <!-- No build step: browser-native ES modules + an import map. See /vendor. -->
+    <script>window.__leafletReady = new Promise((r) => (window.__leafletResolve = r));</script>
+    <script src="/vendor/leaflet.js" defer onload="window.__leafletResolve()"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "/vendor/preact.module.js",
+          "preact/hooks": "/vendor/hooks.module.js",
+          "htm": "/vendor/htm.module.js"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

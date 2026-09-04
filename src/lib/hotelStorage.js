@@ -7,10 +7,13 @@
 
 const KEY = 'ssr-home-hotel-v1';
 
+// Keep in sync with the keys in data/guides.js's HOTELS object.
+const VALID_KEYS = ['artHouse', 'courthouseSquare', 'hyattRegency', 'hotelLaRose', 'acHotel', 'flamingo'];
+
 export function loadHomeHotelKey() {
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw === 'artHouse' || raw === 'courthouseSquare' ? raw : null;
+    return VALID_KEYS.includes(raw) ? raw : null;
   } catch {
     return null;
   }

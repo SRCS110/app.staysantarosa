@@ -1,21 +1,31 @@
 # Stay Santa Rosa — City Guide (mobile app)
 
-A free, no-account guide and full itinerary builder for Art House Santa Rosa and Hotel E guests: a real interactive map, four curated guides (Dining, Wine & Beer, Attractions, Events), a day-by-day trip planner with auto-arranged stops, suggested times, drag-to-reorder, Google Maps handoff and a shareable link, opt-in live location tracking, and a set of retention features layered on top — curated itineraries, "Open now," staff-pick badges, a rainy-day nudge, install-to-home-screen, and foreground closing-soon reminders. Responsive from phone to desktop — a three-tab floating bottom nav (Build/Plan/Events) plus a Browse/Map top nav and stacked layout below ~900px, a sidebar nav with kanban-style day columns above it. Built on the Organic design system (direction 1b, "Ticket stub"), with the client's softer-white background override baked in. Each guide has its own category glyph (fork & knife, wine glass, mask, calendar) used on the list badges, chip row, and map pins in place of generic letters.
+A free, no-account, **no-build** static PWA guide and full itinerary builder for Art House Santa Rosa and Hotel E guests: a real interactive map, four curated guides (Dining, Wine & Beer, Attractions, Events), a day-by-day trip planner with auto-arranged stops, suggested times, drag-to-reorder, Google Maps handoff and a shareable link, opt-in live location tracking, and a set of retention features layered on top — curated itineraries, "Open now," staff-pick badges, a rainy-day nudge, install-to-home-screen, and foreground closing-soon reminders. Responsive from phone to desktop — a three-tab floating bottom nav (Build/Plan/Events) plus a Browse/Map top nav and stacked layout below ~900px, a sidebar nav with kanban-style day columns above it. Built on the Organic design system (direction 1b, "Ticket stub"), with the client's softer-white background override baked in. Each guide has its own category glyph (fork & knife, wine glass, mask, calendar) used on the list badges, chip row, and map pins in place of generic letters.
 
 ## Run it
 
+**No build step, no `npm install`, no dependencies.** It's plain ES modules + an import map. Serve the repo root with any static server:
+
 ```
-npm install
-npm run dev
+npm run dev            # → node serve.mjs 5173 (zero-dep, in this repo)
+# or: python3 -m http.server 5173
+# or: npx serve
 ```
 
-Open the printed local URL — resize the browser to phone width, or use its device-toolbar/responsive mode. `npm run build` outputs a static `dist/` folder that deploys as-is to Vercel, Netlify, GitHub Pages, or any static host — no server, no environment variables, no database. Location tracking and installability both need a secure context (`https://`, or `localhost` during dev) — browsers refuse the Geolocation API and `beforeinstallprompt` otherwise.
+Open `http://localhost:5173`. To deploy: push the repo to Vercel / Netlify / GitHub Pages with **no build command and no output directory** — the root *is* the site. No server, no environment variables, no database. Location tracking and installability both need a secure context (`https://`, or `localhost` during dev) — browsers refuse the Geolocation API and `beforeinstallprompt` otherwise.
+
+### Stack
+
+- **Preact + htm** (`/vendor`, ~16 KB total) for the view layer — the `html\`\`` tagged template in `src/preact.js` stands in for JSX. No React, no bundler, no transpile.
+- **Leaflet 1.9** (`/vendor/leaflet.js`, loaded as a plain `<script>`, keyless Esri basemap) for the map.
+- Plain CSS on the licensed Organic tokens (`src/styles/`), linked from `index.html`.
+- Total repo footprint ~600 KB (was ~48 MB of `node_modules` under the old Vite setup).
 
 ## Navigation — a three-tab bottom nav plus a top nav
 
 A rounded, frosted-glass nav floats over the bottom of every screen with three tabs — **Build**, **Plan**, **Events**. Two more destinations — **Browse** and **Map** — live in a small top nav on every primary screen, keeping the phone bottom bar to three targets. Switching is a flat tab switch: no new screen pushed, no lost scroll position. On desktop (≥900px) a left sidebar replaces the bottom bar and the top nav stays put.
 
-Every screen's topbar has a **trip-details button** (in place of the old "Free · No sign-in" pill) showing the trip length and plan count; it opens the **Trip details** page ([`TripScreen.jsx`](src/components/TripScreen.jsx)) where the visitor sets their home hotel, trip length, and arrival date — the same values the first-run sheets collect, editable any time. Plan's "Trip details" toolbar button and the empty-plan CTA both route here.
+Every screen's topbar has a **trip-details button** (in place of the old "Free · No sign-in" pill) showing the trip length and plan count; it opens the **Trip details** page ([`TripScreen.js`](src/components/TripScreen.js)) where the visitor sets their home hotel, trip length, and arrival date — the same values the first-run sheets collect, editable any time. Plan's "Trip details" toolbar button and the empty-plan CTA both route here.
 
 1. **Build** — the home screen, no map: an install banner and rainy-day nudge when they apply, a row of ready-made itinerary cards, a **Sponsored** section of paid-placement local businesses (each card carries a visible "Sponsored" label; `data/featured.js` — real places from `guides.js`, currently house placeholders until advertisers sign on), an Events teaser card, the full Attractions list, and a "Browse all" link into the Browse page. Tap **+** on any row to add a place to your plan without leaving the list.
 2. **Browse** (top nav) — the full filterable list, split out of the old Build page: Dining / Wine & Beer / Attractions chips, the tag filter chips for the active guide, and the place list with **+** to add.
@@ -63,7 +73,7 @@ Stops you add live in `localStorage` under `ssr-plan-v1` — nothing leaves the 
 
 ## Offline
 
-`public/sw.js` was already a cache-first service worker for the app shell plus a network-with-cache-fallback pass-through for everything else it sees a visitor request (tiles included) — so a guest who's opened the app before keeps using it with no signal. The only addition here is `OfflineBanner.jsx`, a `navigator.onLine`-driven strip telling the visitor that's what's happening, so a place that hasn't loaded before reads as "not cached yet" rather than "broken."
+`sw.js` (repo root) is a cache-first service worker: it precaches the module entry graph + `/vendor` libs + styles on install, then does a network-with-cache-fallback pass-through for everything else a visitor requests (tiles, guide images, lazily-hit modules) — so a guest who's opened the app before keeps using it with no signal. `OfflineBanner.js` is a `navigator.onLine`-driven strip telling the visitor that's what's happening, so a place that hasn't loaded before reads as "not cached yet" rather than "broken."
 
 ## What's real vs. placeholder
 
@@ -93,23 +103,25 @@ The same app, no separate build — everything above ~900px wide switches from t
 - `src/lib/planStorage.js` — localStorage read/write for the plan (now with each stop's day + order).
 - `src/lib/tripStorage.js` — localStorage read/write for trip length + optional start date.
 - `src/lib/itineraryPlanner.js` — the auto-arrange algorithm: geographic day-clustering, meal/time-of-day ordering, suggested-time derivation.
-- `src/components/TripPicker.jsx` — the first-run/"Trip length" trip-setup sheet.
-- `src/components/BottomNav.jsx` — the floating Build/Plan/Events tab bar (a left sidebar on desktop, see above).
-- `src/components/TopNav.jsx` — the Browse/Map top nav shown on every primary screen.
-- `src/components/BuildScreen.jsx` — the slimmed home page (ready-made itineraries, Start-here shortlist, Events teaser, Attractions list).
-- `src/components/BrowseScreen.jsx` — the full filterable Dining/Wine/Attractions list, split out of Build.
-- `src/components/EventsScreen.jsx` — the standalone community-events page.
-- `src/components/TripScreen.jsx` — the Trip details page (home hotel, trip length, arrival date), opened from every topbar's trip button.
-- `src/components/MapView.jsx` — the real Leaflet map, full-bleed on the Map screen (plan stops only, rendered as labeled cards). Basemap is Esri "Light Gray Canvas" (muted grey base + sparse street-name reference layer) so the pins carry the visual weight — keyless, no account.
-- `src/components/PlanPanel.jsx` — legacy mini-map wrapper, no longer mounted (kept for reference).
-- `src/components/GuideChips.jsx` / `StubList.jsx` — the guide filter chips (Browse passes `only` to drop Events), the per-guide tag filter row, and the "ticket stub" place list (with the plan +/✓ toggle, Open now dot, and rating).
-- `src/components/FeaturedPicks.jsx` — Build's Sponsored section cards (with the per-card "Sponsored" disclosure).
-- `src/components/PlaceDetail.jsx` — the place-detail overlay opened from any screen.
-- `src/components/FullMapScreen.jsx` — the Map screen: full-bleed map of just your plan + next-stop banner + empty-plan hint.
-- `src/components/PlanScreen.jsx` / `PlanSheet.jsx` — the Plan tab and its list, Share button, and Google Maps handoff.
-- `src/components/HotelPicker.jsx` — the first-run home-hotel sheet.
+- `src/components/TripPicker.js` — the first-run/"Trip length" trip-setup sheet.
+- `src/components/BottomNav.js` — the floating Build/Plan/Events tab bar (a left sidebar on desktop, see above).
+- `src/components/TopNav.js` — the Browse/Map top nav shown on every primary screen.
+- `src/components/BuildScreen.js` — the slimmed home page (ready-made itineraries, Start-here shortlist, Events teaser, Attractions list).
+- `src/components/BrowseScreen.js` — the full filterable Dining/Wine/Attractions list, split out of Build.
+- `src/components/EventsScreen.js` — the standalone community-events page.
+- `src/components/TripScreen.js` — the Trip details page (home hotel, trip length, arrival date), opened from every topbar's trip button.
+- `src/components/MapView.js` — the real Leaflet map, full-bleed on the Map screen (plan stops only, rendered as labeled cards). Basemap is Esri "Light Gray Canvas" (muted grey base + sparse street-name reference layer) so the pins carry the visual weight — keyless, no account.
+- `src/preact.js` — the view-layer barrel: re-exports Preact + hooks and the `html\`\`` (htm) tagged template every component uses instead of JSX.
+- `src/main.js` — entry point: renders `<App/>` and registers the service worker.
+- `serve.mjs` — the zero-dependency local static server (`npm run dev`). Not needed in production.
+- `src/components/GuideChips.js` / `StubList.js` — the guide filter chips (Browse passes `only` to drop Events), the per-guide tag filter row, and the "ticket stub" place list (with the plan +/✓ toggle, Open now dot, and rating).
+- `src/components/FeaturedPicks.js` — Build's Sponsored section cards (with the per-card "Sponsored" disclosure).
+- `src/components/PlaceDetail.js` — the place-detail overlay opened from any screen.
+- `src/components/FullMapScreen.js` — the Map screen: full-bleed map of just your plan + next-stop banner + empty-plan hint.
+- `src/components/PlanScreen.js` / `PlanSheet.js` — the Plan tab and its list, Share button, and Google Maps handoff.
+- `src/components/HotelPicker.js` — the first-run home-hotel sheet.
 - `src/data/featured.js` — the Sponsored section's entries (real places from `guides.js`; house placeholders until real advertisers are sold — see the file header).
-- `src/components/InstallPrompt.jsx` / `WeatherNudge.jsx` / `ItineraryPicks.jsx` / `OfflineBanner.jsx` — the Build-tab banners and ready-made-itinerary row.
+- `src/components/InstallPrompt.js` / `WeatherNudge.js` / `ItineraryPicks.js` / `OfflineBanner.js` — the Build-tab banners and ready-made-itinerary row.
 - `src/styles/organic.css` — the licensed Organic token sheet, unmodified except the client's five background-token overrides (documented inline).
 - `src/styles/app.css` — this app's component styles, built only from `var(--*)` tokens, plus the Leaflet chrome overrides.
 
@@ -119,4 +131,4 @@ No accounts, no server-side storage. The map's route line follows real sidewalks
 
 ## A note on how this was built
 
-I couldn't run `npm install` myself to test this — this build environment has no npm registry access — so every component that doesn't touch the Leaflet map was rendered server-side with React as a smoke test (all four guides × every place × every plan/visited/location state, plus the new badges, itinerary cards, hotel picker, install/weather/offline banners, and a content-level check that real staff-pick/dog-friendly/rating/tel-link data actually renders), and every file was syntax-checked. `MapView.jsx` (the one file that talks to Leaflet directly) could only be checked by careful reading against the Leaflet API, not executed, since Leaflet needs a real browser DOM. `lib/weather.js`'s live fetch and `beforeinstallprompt`/`Notification`/`navigator.share` couldn't be exercised in this environment either — they're standard browser APIs used defensively (try/catch, feature-detected, silent fallback), but give install, the rainy-day nudge, share, and reminders a real run-through before calling this done, alongside the map, the plan builder, and location tracking.
+Originally a React 18 + Vite 5 app; converted to a no-build static site (Preact + htm for the view layer, Leaflet loaded as a plain `<script>`, everything served straight from the repo root) to drop the ~48 MB build toolchain — the running app is unchanged. After the conversion every screen was exercised in a real browser: all four guides, Browse/Events/Trip pages, the plan builder with drag-reorder and editable 30-minute times, the Leaflet map with road-following route lines, place detail, and the first-run sheets. `lib/weather.js`'s live fetch and `beforeinstallprompt`/`Notification`/`navigator.share` are standard browser APIs used defensively (try/catch, feature-detected, silent fallback) — give install, the rainy-day nudge, share, and reminders a run-through on a deployed `https://` origin before calling this done.

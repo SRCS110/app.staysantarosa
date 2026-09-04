@@ -1,21 +1,11 @@
 {
   "name": "stay-santa-rosa-app",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Stay Santa Rosa — a free, no-account mobile guide app for Art House Santa Rosa and Hotel E guests: illustrated downtown plan + four curated guides with walking time from each hotel.",
+  "description": "Stay Santa Rosa — a free, no-account, no-build static PWA: an illustrated downtown guide + day-by-day itinerary builder for Art House Santa Rosa and Hotel E guests. Plain ES modules, Preact + htm, Leaflet — no bundler, no npm install.",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "leaflet": "^1.9.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.11"
+    "dev": "node serve.mjs 5173",
+    "start": "node serve.mjs 5173"
   }
 }
