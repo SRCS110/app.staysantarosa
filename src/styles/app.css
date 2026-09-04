@@ -1750,3 +1750,435 @@ body {
     max-width: 420px;
   }
 }
+
+/* ══ Itinerary builder v2 ═══════════════════════════════════════════════
+   The saved tray, day totals, travel legs between stops, per-stop warnings
+   and the stop editor. Structure mirrors lib/itineraryPlanner.js: a day is
+   a header (totals) + alternating leg/stop rows; the saved tray is the
+   same container shape with no schedule. */
+
+/* Rows now carry stacked content (note, duration, warnings), so they align
+   to the top rather than centering a single line. */
+.plan-row {
+  align-items: flex-start;
+  padding: 9px 10px;
+}
+.plan-row-warned {
+  box-shadow: inset 2px 0 0 var(--color-accent-700);
+}
+.plan-row-drag,
+.plan-row-check {
+  margin-top: 1px;
+}
+
+.plan-row-time {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  padding-top: 7px;
+}
+.plan-row-clock-muted {
+  opacity: 0.35;
+  font-weight: 600;
+}
+.plan-row-pin {
+  opacity: 0.75;
+}
+
+.plan-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.plan-row-dur {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  opacity: 0.7;
+}
+/* A duration the visitor set themselves reads as a decision, not a guess. */
+.plan-row-dur-set {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent-700);
+  opacity: 1;
+}
+.plan-row-usernote {
+  font-size: 11.5px;
+  line-height: 1.4;
+  margin-top: 3px;
+  padding-left: 7px;
+  border-left: 2px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+  opacity: 0.8;
+}
+
+.plan-row-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  margin-top: 4px;
+  color: var(--color-accent-700);
+}
+.plan-row-warning-closed {
+  color: #9b3a2f;
+}
+
+.plan-row-edit {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  opacity: 0.45;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plan-row-edit:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+/* ── Travel leg between two consecutive stops ── */
+.plan-leg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 34px;
+  margin: -2px 0;
+}
+.plan-leg-line {
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-text) 28%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+}
+.plan-leg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  opacity: 0.6;
+}
+.plan-leg-miles {
+  opacity: 0.75;
+}
+
+/* ── Day header extras ── */
+.plan-day-header {
+  flex-wrap: wrap;
+}
+.plan-day-menu-btn {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  opacity: 0.45;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plan-day-menu-btn:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.plan-day-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: -2px 0 9px;
+  font-size: 11px;
+}
+.plan-day-window {
+  font-weight: 700;
+  color: var(--color-accent-700);
+}
+.plan-day-split {
+  opacity: 0.6;
+}
+
+.plan-day-warning {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  margin: 0 0 8px;
+  color: var(--color-accent-700);
+}
+
+.plan-day-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 6px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.plan-day-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.plan-day-menu button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+.plan-day-menu button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.plan-day-note {
+  margin-bottom: 9px;
+}
+.plan-day-note-text {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* ── The saved tray: everything added but not yet given a day ── */
+.plan-saved {
+  margin-bottom: 20px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+}
+.plan-saved-empty {
+  background: transparent;
+  padding: 0 0 4px;
+}
+.plan-saved .plan-day-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Undo bar ── */
+.plan-undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 9px 10px 9px 13px;
+  border-radius: var(--radius-md);
+  background: var(--color-sage-900, #272e1b);
+  color: #f3f1e9;
+  font-size: 12px;
+}
+.plan-undo-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  color: #f3f1e9;
+  border-color: color-mix(in srgb, #f3f1e9 35%, transparent);
+}
+
+.plan-empty-card {
+  padding: 22px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+}
+
+/* ── Stop editor sheet ── */
+.stop-editor-sheet {
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.stop-editor-block {
+  margin-bottom: 16px;
+}
+.stop-editor-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.stop-editor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.stop-editor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+.stop-editor-chip-on {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  font-weight: 600;
+}
+.stop-editor-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stop-editor-time {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 11px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.stop-editor-clear {
+  height: 36px;
+  flex: none;
+}
+.stop-editor-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  opacity: 0.6;
+}
+.stop-editor-note {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.stop-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+.stop-editor-remove {
+  color: #9b3a2f;
+}
+
+/* ══ Print — the itinerary as a page you can carry ══════════════════════
+   Everything chrome-like drops away and the plan prints as a plain
+   document: day headings, times, stops, notes and warnings. No separate
+   print template to keep in sync — the screen's own markup is the source. */
+@media print {
+  body {
+    background: #fff;
+  }
+  .bottom-nav,
+  .plan-screen-topbar,
+  .plan-sheet-toolbar,
+  .plan-sheet-header-actions,
+  .plan-undo-bar,
+  .plan-row-drag,
+  .plan-row-edit,
+  .plan-row-remove,
+  .plan-day-menu,
+  .plan-day-menu-btn,
+  .plan-day-cta,
+  .sheet-overlay,
+  .install-prompt,
+  .offline-banner,
+  .weather-nudge {
+    display: none !important;
+  }
+  .plan-screen,
+  .plan-sheet {
+    min-height: 0;
+    padding: 0;
+  }
+  .plan-days {
+    display: block;
+  }
+  .plan-day {
+    width: auto;
+    box-shadow: none;
+    padding: 0;
+    margin-bottom: 18px;
+    break-inside: avoid;
+  }
+  .plan-row {
+    background: transparent;
+    border-bottom: 1px solid #ddd;
+    border-radius: 0;
+    padding: 6px 0;
+    break-inside: avoid;
+  }
+  .plan-saved {
+    background: transparent;
+    padding: 0;
+  }
+  .plan-leg {
+    padding-left: 62px;
+  }
+}
+
+/* Desktop refinements for the new itinerary pieces. */
+@media (min-width: 900px) {
+  .plan-saved {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    backdrop-filter: blur(6px);
+  }
+  .plan-day-menu {
+    position: relative;
+  }
+}

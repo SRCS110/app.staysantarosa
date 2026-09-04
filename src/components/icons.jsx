@@ -227,24 +227,6 @@ export function GripIcon({ size = 16, ...rest }) {
   );
 }
 
-export function GearIcon({ size = 16, ...rest }) {
-  return (
-    <svg {...base(size)} {...rest}>
-      <circle cx="12" cy="12" r="3.2" />
-      <path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" />
-    </svg>
-  );
-}
-
-export function BedIcon({ size = 16, ...rest }) {
-  return (
-    <svg {...base(size)} {...rest}>
-      <path d="M3 7v11M3 12h18v6M21 18v-3a3 3 0 0 0-3-3H8V8a1 1 0 0 1 1-1h9" />
-      <circle cx="6.5" cy="9.5" r="1.4" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 export function WandIcon({ size = 16, ...rest }) {
   return (
     <svg {...base(size)} {...rest}>
@@ -260,6 +242,111 @@ export function PencilIcon({ size = 16, ...rest }) {
     <svg {...base(size)} {...rest}>
       <path d="M4 20l.9-4L16.5 4.4a1.8 1.8 0 0 1 2.6 0l.5.5a1.8 1.8 0 0 1 0 2.6L8 19l-4 1z" />
       <path d="M14.5 6.5l3 3" />
+    </svg>
+  );
+}
+
+export function ClockIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5.2l3.2 2" />
+    </svg>
+  );
+}
+
+// A pushpin — marks a stop whose time is a fixed commitment rather than
+// one the schedule derived.
+export function PinIcon({ size = 16, filled = false, ...rest }) {
+  return (
+    <svg {...base(size)} fill={filled ? 'currentColor' : 'none'} {...rest}>
+      <path d="M9 3h6l-.8 5.2 3 3.3H6.8l3-3.3z" />
+      <path d="M12 11.5V21" />
+    </svg>
+  );
+}
+
+export function AlertIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M12 3.6L21 19H3z" />
+      <path d="M12 9.5v4" />
+      <circle cx="12" cy="16.4" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function PrinterIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M7 9V3.5h10V9" />
+      <rect x="3" y="9" width="18" height="7.5" rx="2" />
+      <rect x="7" y="14" width="10" height="6.5" rx="1.4" />
+    </svg>
+  );
+}
+
+export function CalendarExportIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18" />
+      <path d="M12 13v5" />
+      <path d="M9.6 15.6L12 18l2.4-2.4" />
+    </svg>
+  );
+}
+
+export function UndoIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4 8h9.5a5.5 5.5 0 1 1 0 11H8" />
+      <path d="M7.5 4.5L4 8l3.5 3.5" />
+    </svg>
+  );
+}
+
+export function MoreIcon({ size = 18, ...rest }) {
+  return (
+    <svg {...base(size)} fill="currentColor" stroke="none" {...rest}>
+      <circle cx="5.5" cy="12" r="1.7" />
+      <circle cx="12" cy="12" r="1.7" />
+      <circle cx="18.5" cy="12" r="1.7" />
+    </svg>
+  );
+}
+
+export function SwapIcon({ size = 16, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4 8h13" />
+      <path d="M13.5 4.5L17 8l-3.5 3.5" />
+      <path d="M20 16H7" />
+      <path d="M10.5 12.5L7 16l3.5 3.5" />
+    </svg>
+  );
+}
+
+export function WalkIcon({ size = 14, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <circle cx="13" cy="4.2" r="1.8" />
+      <path d="M12.4 8l-2.6 1.6L8 14" />
+      <path d="M12.4 8l2.6 1.8.8 3.2" />
+      <path d="M12 10.5l-.6 4.3L9 21" />
+      <path d="M11.4 14.8l3 2 1 4.2" />
+    </svg>
+  );
+}
+
+export function CarIcon({ size = 14, ...rest }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4 16v2.2M20 16v2.2" />
+      <path d="M3 15.5v-3l1.8-4.2A2 2 0 0 1 6.6 7h10.8a2 2 0 0 1 1.8 1.3L21 12.5v3z" />
+      <path d="M4 12.5h16" />
+      <circle cx="7.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   );
 }

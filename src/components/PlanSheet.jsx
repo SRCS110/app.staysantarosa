@@ -1,14 +1,27 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { XIcon, ArrowRight, MapPinIcon, ShareIcon, GripIcon, WandIcon, PencilIcon, GuideIcon } from './icons.jsx';
-import { suggestTimesForDay } from '../lib/itineraryPlanner.js';
+import {
+  XIcon,
+  ArrowRight,
+  MapPinIcon,
+  ShareIcon,
+  GripIcon,
+  WandIcon,
+  PencilIcon,
+  GuideIcon,
+  ClockIcon,
+  PinIcon,
+  AlertIcon,
+  PrinterIcon,
+  CalendarExportIcon,
+  UndoIcon,
+  SwapIcon,
+  WalkIcon,
+  CarIcon,
+} from './icons.jsx';
+import { buildDaySchedule, formatDuration } from '../lib/itineraryPlanner.js';
 import { formatMinutes } from '../lib/hours.js';
-import { formatDayDate, dateForDay } from '../lib/tripStorage.js';
-
-// 30-minute clock options for the per-stop time picker, 6:00 AM – 11:30 PM.
-const TIME_OPTIONS = [];
-for (let m = 6 * 60; m <= 23 * 60 + 30; m += 30) {
-  TIME_OPTIONS.push({ value: m, label: formatMinutes(m) });
-}
+import { formatDayDate, dateForDay, weekdayForDay } from '../lib/tripStorage.js';
+import StopEditor from './StopEditor.jsx';
 
 // Up to ~8 waypoints work reliably in Google Maps' free directions URL.
 function googleMapsUrl(stops, origin) {
@@ -24,22 +37,34 @@ function googleMapsUrl(stops, origin) {
 
 const keyOf = (s) => `${s.guideKey}:${s.name}`;
 
-function buildDayBuckets(stops, tripDays) {
-  const buckets = Array.from({ length: tripDays }, () => []);
+// Bucket 0 is the saved tray (stops with no day yet); bucket N is Day N.
+// Days and the saved tray are deliberately the same kind of container —
+// one drag mechanism, one move operation, no special cases — so scheduling
+// a saved place and moving a stop between days are literally the same act.
+function buildBuckets(stops, tripDays) {
+  const buckets = Array.from({ length: tripDays + 1 }, () => []);
   stops.forEach((s) => {
-    const idx = Math.min(tripDays, Math.max(1, s.day || 1)) - 1;
+    const idx = s.day == null ? 0 : Math.min(tripDays, Math.max(1, s.day));
     buckets[idx].push(s);
   });
   buckets.forEach((list) => list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
   return buckets;
 }
 
-// The Plan tab's itinerary — day-by-day columns, each stop draggable
-// (via its grip handle) within or across days. Dragging updates a local
-// working copy live for instant feedback; releasing commits the new
-// day/order back up through onReorder. Suggested times are recomputed on
-// every render straight from whatever order is current, auto or manual —
-// see lib/itineraryPlanner.js.
+function TravelLeg({ travel }) {
+  if (!travel) return null;
+  const Icon = travel.mode === 'walk' ? WalkIcon : CarIcon;
+  return (
+    <div className="plan-leg" aria-label={`${travel.min} minute ${travel.mode}`}>
+      <span className="plan-leg-line" aria-hidden="true" />
+      <span className="plan-leg-chip">
+        <Icon size={12} /> {travel.min} min {travel.mode}
+        {travel.miles != null && <span className="plan-leg-miles"> · {travel.miles.toFixed(1)} mi</span>}
+      </span>
+    </div>
+  );
+}
+
 export default function PlanSheet({
   stops,
   trip,
@@ -51,26 +76,36 @@ export default function PlanSheet({
   onShare,
   onReorder,
   onAutoArrange,
-  onSetTime,
   onEditTrip,
-  onBrowse,
+  onUpdateStop,
+  onOptimizeDay,
+  onClearDay,
+  onSwapDays,
+  onSetDayNote,
+  onExportIcs,
+  onUndo,
+  undoLabel,
 }) {
   const visitedCount = stops.filter((s) => s.visited).length;
+  const scheduled = stops.filter((s) => s.day != null);
   const [shareState, setShareState] = useState('idle');
-  const [editingTimeKey, setEditingTimeKey] = useState(null);
+  const [exportState, setExportState] = useState('idle');
+  const [editingKey, setEditingKey] = useState(null);
+  const [openDayMenu, setOpenDayMenu] = useState(null);
+  const [noteDayOpen, setNoteDayOpen] = useState(null);
 
   const tripDays = Math.max(1, trip?.days || 1);
-  const baseBuckets = useMemo(() => buildDayBuckets(stops, tripDays), [stops, tripDays]);
+  const baseBuckets = useMemo(() => buildBuckets(stops, tripDays), [stops, tripDays]);
 
   // Only set while a drag is in progress — a local, mutable copy so the
   // list can reflow live without waiting on a round-trip through the
-  // parent. Cleared (back to null, meaning "just use baseBuckets") on
-  // pointerup once the real change has been committed via onReorder.
+  // parent. Cleared on pointerup once the change has been committed.
   const [dragBuckets, setDragBuckets] = useState(null);
   const dragRef = useRef(null);
-  const dayRefs = useRef([]);
+  const bucketRefs = useRef([]);
 
   const buckets = dragBuckets || baseBuckets;
+  const editingStop = editingKey ? stops.find((s) => keyOf(s) === editingKey) : null;
 
   async function handleShare() {
     const result = await onShare();
@@ -80,19 +115,25 @@ export default function PlanSheet({
     }
   }
 
+  function handleExport() {
+    const ok = onExportIcs();
+    setExportState(ok ? 'done' : 'needs-date');
+    window.setTimeout(() => setExportState('idle'), 3000);
+  }
+
   function commitDrag(finalBuckets) {
     const flat = [];
-    finalBuckets.forEach((list, dayIdx) => {
+    finalBuckets.forEach((list, bucketIdx) => {
       list.forEach((s, order) => {
-        flat.push({ guideKey: s.guideKey, name: s.name, day: dayIdx + 1, order });
+        flat.push({ guideKey: s.guideKey, name: s.name, day: bucketIdx === 0 ? null : bucketIdx, order });
       });
     });
     onReorder(flat);
   }
 
-  function onHandlePointerDown(e, stop, fromDayIdx) {
+  function onHandlePointerDown(e, stop, fromBucketIdx) {
     e.preventDefault();
-    dragRef.current = { key: keyOf(stop), fromDayIdx, pointerId: e.pointerId };
+    dragRef.current = { key: keyOf(stop), fromBucketIdx, pointerId: e.pointerId };
     setDragBuckets(baseBuckets.map((list) => list.slice()));
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -106,18 +147,18 @@ export default function PlanSheet({
     if (!drag) return;
     const clientY = e.clientY;
 
-    const rects = dayRefs.current.map((el) => (el ? el.getBoundingClientRect() : null));
-    let targetDay = drag.fromDayIdx;
+    const rects = bucketRefs.current.map((el) => (el ? el.getBoundingClientRect() : null));
+    let targetBucket = drag.fromBucketIdx;
     for (let i = 0; i < rects.length; i += 1) {
       if (rects[i] && clientY >= rects[i].top && clientY <= rects[i].bottom) {
-        targetDay = i;
+        targetBucket = i;
         break;
       }
     }
     const known = rects.filter(Boolean);
     if (known.length) {
-      if (clientY < known[0].top) targetDay = 0;
-      else if (clientY > known[known.length - 1].bottom) targetDay = rects.length - 1;
+      if (clientY < known[0].top) targetBucket = rects.findIndex(Boolean);
+      else if (clientY > known[known.length - 1].bottom) targetBucket = rects.length - 1;
     }
 
     setDragBuckets((prev) => {
@@ -133,8 +174,8 @@ export default function PlanSheet({
       }
       if (!draggedItem) return prev;
 
-      const targetList = next[targetDay];
-      const container = dayRefs.current[targetDay];
+      const targetList = next[targetBucket];
+      const container = bucketRefs.current[targetBucket];
       let insertAt = targetList.length;
       if (container) {
         const rows = Array.from(container.querySelectorAll('[data-plan-row]')).filter(
@@ -166,63 +207,109 @@ export default function PlanSheet({
     });
   }
 
+  function renderRow(s, bucketIdx, scheduleRow) {
+    const row = scheduleRow || s;
+    return (
+      <div
+        key={keyOf(s)}
+        data-plan-row
+        data-key={keyOf(s)}
+        className={`plan-row${s.visited ? ' plan-row-visited' : ''}${
+          row.warnings?.length ? ' plan-row-warned' : ''
+        }`}
+      >
+        <button
+          type="button"
+          className="plan-row-drag"
+          onPointerDown={(e) => onHandlePointerDown(e, s, bucketIdx)}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={onHandlePointerUp}
+          onPointerCancel={onHandlePointerUp}
+          aria-label={`Drag ${s.name} to reorder`}
+        >
+          <GripIcon size={15} />
+        </button>
+
+        <span className="plan-row-time">
+          {scheduleRow ? (
+            <>
+              <span className="plan-row-clock">{row.arriveLabel}</span>
+              {row.isTimeFixed && (
+                <PinIcon
+                  size={10}
+                  filled
+                  className="plan-row-pin"
+                  aria-label={row.isEventTime ? 'Published event time' : 'Fixed time'}
+                />
+              )}
+            </>
+          ) : (
+            <span className="plan-row-clock plan-row-clock-muted">—</span>
+          )}
+        </span>
+
+        <button
+          type="button"
+          className="plan-row-check"
+          onClick={() => onToggleVisited(s)}
+          aria-label={s.visited ? `Mark ${s.name} not visited` : `Mark ${s.name} visited`}
+          aria-pressed={s.visited}
+        >
+          {s.visited ? '✓' : <GuideIcon guideKey={s.guideKey} size={12} />}
+        </button>
+
+        <button type="button" className="plan-row-body" onClick={() => onOpenPlace(s)}>
+          <span className="plan-row-name">{s.name}</span>
+          <span className="plan-row-meta">
+            <span className="plan-row-note">{s.note}</span>
+            {scheduleRow && (
+              <span className={`plan-row-dur${row.isDurationOverridden ? ' plan-row-dur-set' : ''}`}>
+                {formatDuration(row.durationMin)}
+              </span>
+            )}
+          </span>
+          {s.userNote && <span className="plan-row-usernote">{s.userNote}</span>}
+          {row.warnings?.map((w) => (
+            <span key={w.kind} className={`plan-row-warning plan-row-warning-${w.kind}`}>
+              <AlertIcon size={11} /> {w.text}
+            </span>
+          ))}
+        </button>
+
+        <button
+          type="button"
+          className="plan-row-edit"
+          onClick={() => setEditingKey(keyOf(s))}
+          aria-label={`Edit ${s.name}`}
+        >
+          <PencilIcon size={13} />
+        </button>
+        <button type="button" className="plan-row-remove" onClick={() => onRemove(s)} aria-label={`Remove ${s.name}`}>
+          <XIcon size={14} />
+        </button>
+      </div>
+    );
+  }
+
   if (!stops.length) {
     return (
       <div className="plan-sheet">
-        <div className="plan-sheet-header">
-          <div>
-            <h2 className="plan-sheet-title">My Trip</h2>
-            <p className="plan-sheet-count">{tripDays === 1 ? '1 day' : `${tripDays} days`} · nothing added yet</p>
-          </div>
-        </div>
-
-        <p className="plan-sheet-empty">
-          This is where your itinerary builds. Add places from Browse or Events and they'll drop into these
-          day columns with suggested times you can drag around.
-        </p>
-
-        <div className="plan-days">
-          {Array.from({ length: tripDays }, (_, dayIdx) => {
-            const dateLabel = formatDayDate(dateForDay(trip, dayIdx + 1));
-            return (
-              <div className="plan-day plan-day-skeleton" key={dayIdx}>
-                <div className="plan-day-header">
-                  <span className="plan-day-title">Day {dayIdx + 1}</span>
-                  {dateLabel && <span className="plan-day-date">{dateLabel}</span>}
-                  <span className="plan-day-count">nothing yet</span>
-                </div>
-                <div className="plan-day-list">
-                  {Array.from({ length: dayIdx === 0 ? 3 : 2 }, (_, i) => (
-                    <div className="plan-row-ghost" key={i} aria-hidden="true">
-                      <span className="plan-row-ghost-time" />
-                      <span className="plan-row-ghost-dot" />
-                      <span className="plan-row-ghost-lines">
-                        <span className="plan-row-ghost-line" />
-                        <span className="plan-row-ghost-line plan-row-ghost-line-short" />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="plan-empty-cta">
-          {onBrowse && (
-            <button type="button" className="btn btn-primary btn-block" onClick={onBrowse}>
-              Browse places to add
-            </button>
-          )}
-          {onEditTrip && (
-            <button type="button" className="btn btn-ghost btn-block" onClick={onEditTrip}>
-              <PencilIcon size={14} /> Edit trip details
-            </button>
-          )}
+        <div className="plan-empty-card">
+          <h2 className="plan-sheet-title">Your itinerary is empty</h2>
+          <p className="plan-sheet-empty">
+            Open any place in <strong>Build</strong> and tap <strong>Add to plan</strong>. Saved places land here
+            unscheduled — then <strong>Auto-arrange</strong> spreads them across your days by neighborhood and time of
+            day, and you can drag anything anywhere from there.
+          </p>
+          <button type="button" className="btn btn-ghost plan-toolbar-btn" onClick={onEditTrip}>
+            <PencilIcon size={14} /> Set trip length
+          </button>
         </div>
       </div>
     );
   }
+
+  const savedStops = buckets[0];
 
   return (
     <div className="plan-sheet">
@@ -230,7 +317,9 @@ export default function PlanSheet({
         <div>
           <h2 className="plan-sheet-title">My Trip</h2>
           <p className="plan-sheet-count">
-            {visitedCount} of {stops.length} visited · {tripDays === 1 ? '1 day' : `${tripDays} days`}
+            {scheduled.length} scheduled
+            {savedStops.length ? ` · ${savedStops.length} saved` : ''} · {visitedCount} visited ·{' '}
+            {tripDays === 1 ? '1 day' : `${tripDays} days`}
           </p>
         </div>
         <div className="plan-sheet-header-actions">
@@ -250,116 +339,205 @@ export default function PlanSheet({
           <WandIcon size={14} /> Auto-arrange
         </button>
         <button type="button" className="btn btn-ghost plan-toolbar-btn" onClick={onEditTrip}>
-          <PencilIcon size={14} /> Trip details
+          <PencilIcon size={14} /> Trip
+        </button>
+        <button type="button" className="btn btn-ghost plan-toolbar-btn" onClick={() => window.print()}>
+          <PrinterIcon size={14} /> Print
+        </button>
+        <button type="button" className="btn btn-ghost plan-toolbar-btn" onClick={handleExport}>
+          <CalendarExportIcon size={14} />{' '}
+          {exportState === 'done' ? 'Downloaded' : exportState === 'needs-date' ? 'Add a date first' : 'Calendar'}
         </button>
       </div>
 
+      {undoLabel && (
+        <div className="plan-undo-bar" role="status">
+          <span>{undoLabel}</span>
+          <button type="button" className="btn btn-ghost plan-undo-btn" onClick={onUndo}>
+            <UndoIcon size={13} /> Undo
+          </button>
+        </div>
+      )}
+
+      {/* The saved tray. Rendered as bucket 0 so a drag into it unschedules
+          a stop with exactly the same gesture that moves one between days. */}
+      <div className={`plan-saved${savedStops.length ? '' : ' plan-saved-empty'}`}>
+        <div className="plan-day-header">
+          <span className="plan-day-title">
+            <ClockIcon size={13} /> Saved
+          </span>
+          <span className="plan-day-count">
+            {savedStops.length ? `${savedStops.length} not scheduled yet` : 'everything is scheduled'}
+          </span>
+        </div>
+        <div
+          className="plan-day-list"
+          ref={(el) => {
+            bucketRefs.current[0] = el;
+          }}
+        >
+          {savedStops.map((s) => renderRow(s, 0, null))}
+          {!savedStops.length && <p className="plan-day-empty">Drag a stop here to take it off the schedule.</p>}
+        </div>
+      </div>
+
       <div className="plan-days">
-        {buckets.map((dayStops, dayIdx) => {
-          const timed = suggestTimesForDay(dayStops, origin);
-          const dateLabel = formatDayDate(dateForDay(trip, dayIdx + 1));
+        {buckets.slice(1).map((dayStops, i) => {
+          const dayNumber = i + 1;
+          const dateIso = dateForDay(trip, dayNumber);
+          const schedule = buildDaySchedule(dayStops, {
+            origin,
+            dayStartMin: trip?.dayStartMin ?? 9 * 60,
+            dayEndMin: trip?.dayEndMin ?? 22 * 60,
+            weekdayIndex: weekdayForDay(trip, dayNumber),
+          });
+          const dateLabel = formatDayDate(dateIso);
           const mapsUrl = googleMapsUrl(dayStops, origin);
+          const dayNote = trip?.dayNotes?.[dayNumber] || '';
           return (
-            <div className="plan-day" key={dayIdx}>
+            <div className="plan-day" key={dayNumber}>
               <div className="plan-day-header">
-                <span className="plan-day-title">Day {dayIdx + 1}</span>
+                <span className="plan-day-title">Day {dayNumber}</span>
                 {dateLabel && <span className="plan-day-date">{dateLabel}</span>}
                 <span className="plan-day-count">
-                  {dayStops.length ? `${dayStops.length} ${dayStops.length === 1 ? 'stop' : 'stops'}` : 'nothing yet'}
+                  {dayStops.length
+                    ? `${dayStops.length} ${dayStops.length === 1 ? 'stop' : 'stops'}`
+                    : 'nothing yet'}
                 </span>
+                <button
+                  type="button"
+                  className="plan-day-menu-btn"
+                  onClick={() => setOpenDayMenu(openDayMenu === dayNumber ? null : dayNumber)}
+                  aria-expanded={openDayMenu === dayNumber}
+                  aria-label={`Day ${dayNumber} options`}
+                >
+                  <PencilIcon size={13} />
+                </button>
               </div>
+
+              {schedule.rows.length > 0 && (
+                <div className="plan-day-summary">
+                  <span className="plan-day-window">
+                    {formatMinutes(schedule.rows[0].arriveMin)} – {formatMinutes(schedule.endMin)}
+                  </span>
+                  <span className="plan-day-split">
+                    {formatDuration(schedule.dwellMin)} at stops
+                    {schedule.travelMin > 0 && ` · ${formatDuration(schedule.travelMin)} getting around`}
+                  </span>
+                </div>
+              )}
+
+              {schedule.warnings.map((w) => (
+                <p key={w.kind} className="plan-day-warning">
+                  <AlertIcon size={12} /> {w.text}
+                </p>
+              ))}
+
+              {openDayMenu === dayNumber && (
+                <div className="plan-day-menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOptimizeDay(dayNumber);
+                      setOpenDayMenu(null);
+                    }}
+                    disabled={dayStops.length < 2}
+                  >
+                    <WandIcon size={13} /> Optimize this day
+                  </button>
+                  {dayNumber < tripDays && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSwapDays(dayNumber, dayNumber + 1);
+                        setOpenDayMenu(null);
+                      }}
+                    >
+                      <SwapIcon size={13} /> Swap with Day {dayNumber + 1}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoteDayOpen(noteDayOpen === dayNumber ? null : dayNumber);
+                      setOpenDayMenu(null);
+                    }}
+                  >
+                    <PencilIcon size={13} /> {dayNote ? 'Edit day note' : 'Add a day note'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClearDay(dayNumber);
+                      setOpenDayMenu(null);
+                    }}
+                    disabled={!dayStops.length}
+                  >
+                    <XIcon size={13} /> Move this day to Saved
+                  </button>
+                </div>
+              )}
+
+              {(noteDayOpen === dayNumber || dayNote) && (
+                <div className="plan-day-note">
+                  {noteDayOpen === dayNumber ? (
+                    <textarea
+                      className="stop-editor-note"
+                      rows={2}
+                      maxLength={500}
+                      autoFocus
+                      defaultValue={dayNote}
+                      placeholder={`Anything to remember about Day ${dayNumber}…`}
+                      onBlur={(e) => {
+                        onSetDayNote(dayNumber, e.target.value);
+                        setNoteDayOpen(null);
+                      }}
+                    />
+                  ) : (
+                    <button type="button" className="plan-day-note-text" onClick={() => setNoteDayOpen(dayNumber)}>
+                      {dayNote}
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div
                 className="plan-day-list"
                 ref={(el) => {
-                  dayRefs.current[dayIdx] = el;
+                  bucketRefs.current[dayNumber] = el;
                 }}
               >
-                {timed.map((s) => (
-                  <div
-                    key={keyOf(s)}
-                    data-plan-row
-                    data-key={keyOf(s)}
-                    className={`plan-row${s.visited ? ' plan-row-visited' : ''}`}
-                  >
-                    <button
-                      type="button"
-                      className="plan-row-drag"
-                      onPointerDown={(e) => onHandlePointerDown(e, s, dayIdx)}
-                      onPointerMove={onHandlePointerMove}
-                      onPointerUp={onHandlePointerUp}
-                      onPointerCancel={onHandlePointerUp}
-                      aria-label={`Drag ${s.name} to reorder`}
-                    >
-                      <GripIcon size={15} />
-                    </button>
-                    {editingTimeKey === keyOf(s) ? (
-                      <select
-                        className="plan-row-time-select"
-                        // eslint-disable-next-line jsx-a11y/no-autofocus
-                        autoFocus
-                        value={Number.isFinite(s.time) ? s.time : ''}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          onSetTime(s, v === '' ? null : Number(v));
-                          setEditingTimeKey(null);
-                        }}
-                        onBlur={() => setEditingTimeKey(null)}
-                        aria-label={`Set a time for ${s.name}`}
-                      >
-                        <option value="">Auto</option>
-                        {TIME_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <button
-                        type="button"
-                        className={`plan-row-time${s.timeEdited ? ' plan-row-time-edited' : ''}`}
-                        onClick={() => onSetTime && setEditingTimeKey(keyOf(s))}
-                        aria-label={`Change time for ${s.name}, currently ${s.suggestedTime}`}
-                        title="Change time"
-                      >
-                        {s.suggestedTime}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="plan-row-check"
-                      onClick={() => onToggleVisited(s)}
-                      aria-label={s.visited ? `Mark ${s.name} not visited` : `Mark ${s.name} visited`}
-                      aria-pressed={s.visited}
-                    >
-                      {s.visited ? '✓' : <GuideIcon guideKey={s.guideKey} size={12} />}
-                    </button>
-                    <button type="button" className="plan-row-body" onClick={() => onOpenPlace(s)}>
-                      <span className="plan-row-name">{s.name}</span>
-                      <span className="plan-row-note">{s.note}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="plan-row-remove"
-                      onClick={() => onRemove(s)}
-                      aria-label={`Remove ${s.name}`}
-                    >
-                      <XIcon size={14} />
-                    </button>
-                  </div>
+                {schedule.rows.map((row, idx) => (
+                  <React.Fragment key={keyOf(row)}>
+                    {idx > 0 && <TravelLeg travel={row.travel} />}
+                    {renderRow(dayStops.find((s) => keyOf(s) === keyOf(row)) || row, dayNumber, row)}
+                  </React.Fragment>
                 ))}
                 {!dayStops.length && <p className="plan-day-empty">Drag a stop here, or add more from Build.</p>}
               </div>
 
               {mapsUrl && (
                 <a className="btn btn-ghost btn-block plan-day-cta" href={mapsUrl} target="_blank" rel="noreferrer">
-                  <MapPinIcon size={14} /> Open Day {dayIdx + 1} in Google Maps <ArrowRight size={14} />
+                  <MapPinIcon size={14} /> Open Day {dayNumber} in Google Maps <ArrowRight size={14} />
                 </a>
               )}
             </div>
           );
         })}
       </div>
+
+      {editingStop && (
+        <StopEditor
+          stop={editingStop}
+          tripDays={tripDays}
+          onClose={() => setEditingKey(null)}
+          onChange={(patch) => onUpdateStop(editingStop, patch)}
+          onRemove={() => {
+            onRemove(editingStop);
+            setEditingKey(null);
+          }}
+        />
+      )}
     </div>
   );
 }

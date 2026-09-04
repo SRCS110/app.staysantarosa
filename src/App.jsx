@@ -1,9 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GUIDES_BY_KEY, HOTELS } from './data/guides.js';
 import { ITINERARIES } from './data/itineraries.js';
-import { loadPlan, savePlan } from './lib/planStorage.js';
-import { loadTrip, saveTrip, hasAskedTrip, markAskedTrip } from './lib/tripStorage.js';
-import { autoArrangePlan } from './lib/itineraryPlanner.js';
+import { loadPlan, savePlan, newStop } from './lib/planStorage.js';
+import {
+  loadTrip,
+  saveTrip,
+  hasAskedTrip,
+  markAskedTrip,
+  dateForDay,
+  weekdayForDay,
+} from './lib/tripStorage.js';
+import { autoArrangePlan, optimizeDay, buildDaySchedule } from './lib/itineraryPlanner.js';
+import { downloadIcs } from './lib/itineraryExport.js';
 import { estimateFrom } from './lib/geo.js';
 import { sortUpcomingEvents } from './lib/events.js';
 import { loadHomeHotelKey, saveHomeHotelKey, hasAskedHomeHotel, markAskedHomeHotel } from './lib/hotelStorage.js';
@@ -36,6 +44,13 @@ export default function App() {
   const [emphasizedName, setEmphasizedName] = useState(null);
 
   const [planStops, setPlanStops] = useState(() => loadPlan());
+
+  // One snapshot, one undo — every action that throws away arrangement the
+  // visitor might have wanted (auto-arrange, clear, clear a day, optimize a
+  // day) stashes the plan first and offers a single revert, rather than
+  // each growing its own confirm dialog. Cleared as soon as they do
+  // anything else, so Undo never quietly reverts something unexpected.
+  const [undoState, setUndoState] = useState(null); // { stops, label }
 
   const [userLocation, setUserLocation] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -150,6 +165,11 @@ export default function App() {
   }, [guide, activeGuide, homeHotel]);
   const guideForList = useMemo(() => ({ ...activeGuide, places: displayPlaces }), [activeGuide, displayPlaces]);
 
+  // Resolved plan stops: the place's own data from guides.js, plus this
+  // visitor's decisions layered on top. Note the deliberate rename —
+  // `place.note` is the guide's category label ("Breakfast / Diner"), so
+  // the visitor's own note rides along as `userNote` rather than clobbering
+  // it. `day` stays null when the stop is saved but not yet scheduled.
   const planPlaces = useMemo(
     () =>
       planStops
@@ -158,17 +178,30 @@ export default function App() {
           const place = g && g.places.find((p) => p.name === ref.name);
           if (!place) return null;
           const walk = homeHotel ? estimateFrom(homeHotel, place) : place.walk;
-          return { ...place, guideKey: ref.guideKey, visited: ref.visited, day: ref.day || 1, order: ref.order ?? 0, walk };
+          return {
+            ...place,
+            guideKey: ref.guideKey,
+            visited: ref.visited,
+            day: ref.day ?? null,
+            order: ref.order ?? 0,
+            durationMin: ref.durationMin ?? null,
+            startMin: ref.startMin ?? null,
+            userNote: ref.note ?? null,
+            walk,
+          };
         })
         .filter(Boolean),
     [planStops, homeHotel]
   );
 
   useEffect(() => {
-    nextUnvisitedRef.current = planPlaces
-      .slice()
-      .sort((a, b) => a.day - b.day || a.order - b.order)
-      .find((p) => !p.visited) || null;
+    // Only scheduled stops can be "next" — something sitting unscheduled in
+    // the saved tray has no place in the day's running order.
+    nextUnvisitedRef.current =
+      planPlaces
+        .filter((p) => p.day != null)
+        .sort((a, b) => a.day - b.day || a.order - b.order)
+        .find((p) => !p.visited) || null;
   }, [planPlaces]);
 
   const indoorAttractions = useMemo(
@@ -194,13 +227,16 @@ export default function App() {
     return planStops.some((s) => s.guideKey === guideKey && s.name === place.name);
   }
 
+  // Adding a place saves it *unscheduled* rather than dropping it on Day 1:
+  // wanting to go somewhere and having decided when are different things,
+  // and the Plan tab's saved tray is where the first becomes the second
+  // (by dragging, by the stop editor, or by Auto-arrange).
   function toggleInPlan(place, guideKey) {
     setPlanStops((prev) => {
       const exists = prev.some((s) => s.guideKey === guideKey && s.name === place.name);
       if (exists) return prev.filter((s) => !(s.guideKey === guideKey && s.name === place.name));
-      const day = 1;
-      const order = prev.filter((s) => (s.day || 1) === day).length;
-      return [...prev, { guideKey, name: place.name, visited: false, day, order }];
+      const order = prev.filter((s) => s.day == null).length;
+      return [...prev, newStop(guideKey, place.name, { order })];
     });
   }
 
@@ -218,16 +254,27 @@ export default function App() {
         const key = `${r.guideKey}:${r.name}`;
         if (existing.has(key)) return;
         existing.add(key);
-        if (Number.isFinite(r.day)) {
-          additions.push({
-            guideKey: r.guideKey,
-            name: r.name,
-            visited: false,
-            day: r.day,
-            order: Number.isFinite(r.order) ? r.order : 0,
-          });
+        // A shared plan carries the sharer's own arrangement and per-stop
+        // choices (how long, any fixed time, their note) — all of it comes
+        // across, including a stop they had saved but not scheduled.
+        const carried = {
+          durationMin: Number.isFinite(r.durationMin) ? r.durationMin : null,
+          startMin: Number.isFinite(r.startMin) ? r.startMin : null,
+          note: typeof r.note === 'string' ? r.note : null,
+        };
+        if (Number.isFinite(r.day) || r.day === null) {
+          additions.push(
+            newStop(r.guideKey, r.name, {
+              ...carried,
+              day: Number.isFinite(r.day) ? r.day : null,
+              order: Number.isFinite(r.order) ? r.order : 0,
+            })
+          );
         } else {
-          additions.push({ guideKey: r.guideKey, name: r.name, visited: false, day: 1, order: day1Count });
+          // A curated itinerary or a shared plan is already *a plan* — it
+          // lands scheduled, unlike a single place tapped from a guide,
+          // which lands in the saved tray.
+          additions.push(newStop(r.guideKey, r.name, { day: 1, order: day1Count }));
           day1Count += 1;
         }
       });
@@ -246,45 +293,159 @@ export default function App() {
   }
 
   // Drag-reorder in PlanSheet hands back the whole plan's new day/order
-  // assignment in one shot once a drag is released.
+  // assignment in one shot once a drag is released. `day: null` here means
+  // the stop was dropped into the saved tray.
   function reorderPlan(flatList) {
+    setUndoState(null);
     setPlanStops((prev) => {
       const byKey = new Map(flatList.map((f) => [`${f.guideKey}:${f.name}`, f]));
       return prev.map((s) => {
         const next = byKey.get(`${s.guideKey}:${s.name}`);
-        return next ? { ...s, day: next.day, order: next.order } : s;
+        return next ? { ...s, day: next.day ?? null, order: next.order } : s;
       });
     });
   }
 
-  // Re-runs the itinerary planner over the current plan from scratch —
-  // discards any manual dragging in favor of the geography/time-of-day
-  // suggestion. A deliberate action (the Plan tab's "Auto-arrange"
-  // button), never triggered automatically.
-  function autoArrange() {
+  // The single undo path shared by every destructive plan action.
+  function snapshotPlan(label) {
+    setUndoState({ stops: planStops, label });
+  }
+
+  function undoPlanChange() {
+    if (!undoState) return;
+    setPlanStops(undoState.stops);
+    setUndoState(null);
+  }
+
+  // Patch one stop's own fields (duration, pinned time, day, note) — the
+  // stop editor's only write path. Moving to a different day also puts the
+  // stop at the end of that day rather than colliding with an existing
+  // order value.
+  function updateStop(ref, patch) {
+    setUndoState(null);
     setPlanStops((prev) => {
-      const resolved = prev
-        .map((ref) => {
-          const g = GUIDES_BY_KEY[ref.guideKey];
-          const place = g && g.places.find((p) => p.name === ref.name);
-          return place ? { ...place, guideKey: ref.guideKey } : null;
-        })
-        .filter(Boolean);
-      if (!resolved.length) return prev;
-      const arranged = autoArrangePlan(resolved, trip, homeOrigin);
-      const byKey = new Map(arranged.map((a) => [`${a.guideKey}:${a.name}`, a]));
+      const movingDay = Object.prototype.hasOwnProperty.call(patch, 'day') && patch.day !== ref.day;
+      const tailOrder = movingDay ? prev.filter((s) => (s.day ?? null) === (patch.day ?? null)).length : null;
       return prev.map((s) => {
-        const a = byKey.get(`${s.guideKey}:${s.name}`);
-        return a ? { ...s, day: a.day, order: a.order } : s;
+        if (s.guideKey !== ref.guideKey || s.name !== ref.name) return s;
+        return { ...s, ...patch, ...(movingDay ? { order: tailOrder } : null) };
       });
     });
+  }
+
+  function resolveStops(refs) {
+    return refs
+      .map((ref) => {
+        const g = GUIDES_BY_KEY[ref.guideKey];
+        const place = g && g.places.find((p) => p.name === ref.name);
+        return place ? { ...place, ...ref } : null;
+      })
+      .filter(Boolean);
+  }
+
+  function applyArrangement(arranged) {
+    const byKey = new Map(arranged.map((a) => [`${a.guideKey}:${a.name}`, a]));
+    setPlanStops((prev) =>
+      prev.map((s) => {
+        const a = byKey.get(`${s.guideKey}:${s.name}`);
+        return a ? { ...s, day: a.day, order: a.order } : s;
+      })
+    );
+  }
+
+  // Re-runs the planner over the whole plan — saved-but-unscheduled stops
+  // included, since placing those is most of the point. Deliberate action
+  // only (the Plan tab's button), and always undoable.
+  function autoArrange() {
+    const resolved = resolveStops(planStops);
+    if (!resolved.length) return;
+    snapshotPlan('Auto-arranged your itinerary.');
+    applyArrangement(autoArrangePlan(resolved, trip, homeOrigin));
+  }
+
+  // Reorders one day and leaves every other day alone — the scope the
+  // mainstream planners settled on, because a whole-trip reshuffle throws
+  // away decisions the visitor already made.
+  function optimizeOneDay(dayNumber) {
+    const dayStops = resolveStops(planStops.filter((s) => s.day === dayNumber));
+    if (dayStops.length < 2) return;
+    snapshotPlan(`Reordered Day ${dayNumber} by walking distance.`);
+    applyArrangement(optimizeDay(dayStops, dayNumber, homeOrigin));
+  }
+
+  // Empties a day back into the saved tray rather than deleting anything —
+  // the stops are still wanted, just not on that day.
+  function clearDay(dayNumber) {
+    snapshotPlan(`Moved Day ${dayNumber} back to Saved.`);
+    setPlanStops((prev) => {
+      let tail = prev.filter((s) => s.day == null).length;
+      return prev.map((s) => {
+        if (s.day !== dayNumber) return s;
+        const moved = { ...s, day: null, order: tail };
+        tail += 1;
+        return moved;
+      });
+    });
+  }
+
+  function swapDays(a, b) {
+    snapshotPlan(`Swapped Day ${a} and Day ${b}.`);
+    setPlanStops((prev) =>
+      prev.map((s) => {
+        if (s.day === a) return { ...s, day: b };
+        if (s.day === b) return { ...s, day: a };
+        return s;
+      })
+    );
+  }
+
+  function setDayNote(dayNumber, text) {
+    setTrip((prev) => {
+      const dayNotes = { ...(prev.dayNotes || {}) };
+      const clean = (text || '').trim();
+      if (clean) dayNotes[dayNumber] = clean.slice(0, 500);
+      else delete dayNotes[dayNumber];
+      const next = { ...prev, dayNotes };
+      saveTrip(next);
+      return next;
+    });
+  }
+
+  // Builds the same day schedules the Plan tab shows and hands them to the
+  // .ics writer. Returns false when the trip has no start date — without
+  // one there are no real calendar dates to export, and guessing them into
+  // someone's calendar would be worse than not exporting.
+  function exportIcs() {
+    if (!trip.startDate) return false;
+    const days = [];
+    for (let dayNumber = 1; dayNumber <= trip.days; dayNumber += 1) {
+      const dayStops = planPlaces
+        .filter((s) => s.day === dayNumber)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      if (!dayStops.length) continue;
+      const schedule = buildDaySchedule(dayStops, {
+        origin: homeOrigin,
+        dayStartMin: trip.dayStartMin,
+        dayEndMin: trip.dayEndMin,
+        weekdayIndex: weekdayForDay(trip, dayNumber),
+      });
+      days.push({
+        dayNumber,
+        dateIso: dateForDay(trip, dayNumber),
+        rows: schedule.rows.map((r) => ({ ...r, note: r.userNote || null })),
+      });
+    }
+    return downloadIcs(days);
   }
 
   function removePlanStop(ref) {
+    snapshotPlan(`Removed ${ref.name}.`);
     setPlanStops((prev) => prev.filter((s) => !(s.guideKey === ref.guideKey && s.name === ref.name)));
   }
 
   function clearPlan() {
+    if (!planStops.length) return;
+    snapshotPlan('Cleared your whole plan.');
     setPlanStops([]);
   }
 
@@ -334,9 +495,14 @@ export default function App() {
     afterHotelPicker();
   }
 
+  // The trip picker only edits length and start date — merge rather than
+  // replace, so day notes and the day-start/end window survive an edit.
   function saveTripChoice(newTrip) {
-    setTrip(newTrip);
-    saveTrip(newTrip);
+    setTrip((prev) => {
+      const merged = { ...prev, ...newTrip };
+      saveTrip(merged);
+      return merged;
+    });
     markAskedTrip();
     setShowTripPicker(false);
   }
@@ -496,6 +662,14 @@ export default function App() {
           onReorder={reorderPlan}
           onAutoArrange={autoArrange}
           onEditTrip={() => setShowTripPicker(true)}
+          onUpdateStop={updateStop}
+          onOptimizeDay={optimizeOneDay}
+          onClearDay={clearDay}
+          onSwapDays={swapDays}
+          onSetDayNote={setDayNote}
+          onExportIcs={exportIcs}
+          onUndo={undoPlanChange}
+          undoLabel={undoState?.label || null}
         />
       )}
 

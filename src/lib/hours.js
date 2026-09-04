@@ -64,6 +64,43 @@ export function mealSlotHint(hours) {
   return 'lunch';
 }
 
+// The open windows for one weekday (0 = Sunday), as [startMin, endMin]
+// pairs measured from that day's midnight. An end past 1440 means the
+// window runs into the next morning. Returns null — meaning "unknown", NOT
+// "closed" — when the place carries no hours data at all, so callers can
+// tell a real closure apart from missing data (see the header note above).
+export function windowsForWeekday(hours, weekdayIndex) {
+  if (!hours) return null;
+  const name = DAYS[((weekdayIndex % 7) + 7) % 7];
+  return parseDayRanges(hours[name]);
+}
+
+// Would this place be open at `minutes` past midnight on `weekdayIndex`?
+// Returns null when hours are unknown (never a guess), true/false otherwise.
+// Accounts for the previous day's window spilling past midnight.
+export function isOpenAt(hours, weekdayIndex, minutes) {
+  const today = windowsForWeekday(hours, weekdayIndex);
+  if (today == null) return null;
+  for (const [start, end] of today) {
+    if (minutes >= start && minutes < end) return true;
+  }
+  const yesterday = windowsForWeekday(hours, weekdayIndex - 1) || [];
+  for (const [, end] of yesterday) {
+    if (end > 1440 && minutes < end - 1440) return true;
+  }
+  return false;
+}
+
+// "11:30 AM – 9:00 PM" for the given weekday, or null when unknown, or
+// 'Closed' when the day has no windows at all. Used to explain a
+// closed-on-arrival warning instead of just flagging it.
+export function windowLabelForWeekday(hours, weekdayIndex) {
+  const windows = windowsForWeekday(hours, weekdayIndex);
+  if (windows == null) return null;
+  if (!windows.length) return 'Closed';
+  return windows.map(([s, e]) => `${formatMinutes(s)} – ${formatMinutes(e)}`).join(', ');
+}
+
 export function formatMinutes(totalMinutes) {
   const m = ((totalMinutes % 1440) + 1440) % 1440;
   let hour = Math.floor(m / 60);

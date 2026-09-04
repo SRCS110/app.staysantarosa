@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import MapView from './MapView.jsx';
-import TopNav from './TopNav.jsx';
 import { haversineMiles, walkMinutes, driveMinutes } from '../lib/geo.js';
 
 // The Map tab — your plan, and only your plan, on the real map. No guide
@@ -23,21 +22,29 @@ export default function FullMapScreen({
   onOpenPlace,
   homeOrigin,
   homeOriginLabel,
-  onSelectTab,
 }) {
   const tripDays = Math.max(1, trip?.days || 1);
   const [selectedDay, setSelectedDay] = useState(0); // 0 = All
 
+  // Only scheduled stops form the route — a saved-but-unscheduled place
+  // has no position in any day, so folding it into Day 1 (as this screen
+  // used to) drew a route line through somewhere the visitor never
+  // actually planned to go. They get their own chip instead.
   const sortedPlaces = useMemo(
-    () => planPlaces.slice().sort((a, b) => (a.day || 1) - (b.day || 1) || (a.order ?? 0) - (b.order ?? 0)),
+    () =>
+      planPlaces
+        .filter((p) => p.day != null)
+        .sort((a, b) => a.day - b.day || (a.order ?? 0) - (b.order ?? 0)),
     [planPlaces]
   );
-  const visiblePlaces = useMemo(
-    () => (selectedDay === 0 ? sortedPlaces : sortedPlaces.filter((p) => (p.day || 1) === selectedDay)),
-    [sortedPlaces, selectedDay]
-  );
+  const savedPlaces = useMemo(() => planPlaces.filter((p) => p.day == null), [planPlaces]);
+  const visiblePlaces = useMemo(() => {
+    if (selectedDay === -1) return savedPlaces;
+    if (selectedDay === 0) return sortedPlaces;
+    return sortedPlaces.filter((p) => p.day === selectedDay);
+  }, [sortedPlaces, savedPlaces, selectedDay]);
 
-  const nextStop = planPlaces.find((p) => !p.visited);
+  const nextStop = sortedPlaces.find((p) => !p.visited);
   let nextStopDistance = null;
   if (nextStop) {
     const from = userLocation || homeOrigin || hotels.courthouseSquare;
@@ -56,9 +63,7 @@ export default function FullMapScreen({
         </span>
       </div>
 
-      <TopNav activeTab="map" onSelect={onSelectTab} planCount={planPlaces.length} />
-
-      {planPlaces.length > 0 && tripDays > 1 && (
+      {planPlaces.length > 0 && (tripDays > 1 || savedPlaces.length > 0) && (
         <div className="full-map-day-chips">
           <button
             type="button"
@@ -77,6 +82,15 @@ export default function FullMapScreen({
               Day {d}
             </button>
           ))}
+          {savedPlaces.length > 0 && (
+            <button
+              type="button"
+              className={`full-map-day-chip${selectedDay === -1 ? ' full-map-day-chip-active' : ''}`}
+              onClick={() => setSelectedDay(-1)}
+            >
+              Saved ({savedPlaces.length})
+            </button>
+          )}
         </div>
       )}
 
